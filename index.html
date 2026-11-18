@@ -726,7 +726,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=[],locations=[],view='list',listMode=localStorage.getItem('listMode')||'cards',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,edit=null,sc=null,onc=null,photoData='';
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
 
@@ -749,6 +749,12 @@ async function api(a,d){
 }
 
 async function run(fn){$('#bz').classList.add('on');try{return await fn()}catch(e){toast(e.message)}finally{$('#bz').classList.remove('on')}}
+const saveLocalCache=()=>{
+  try{
+    localStorage.setItem('cache_parts',JSON.stringify(parts));
+    localStorage.setItem('cache_locs',JSON.stringify(locations));
+  }catch(e){}
+};
 const load=async()=>{
   const res=await api('list');
   if(Array.isArray(res)){
@@ -757,9 +763,10 @@ const load=async()=>{
     parts=res.parts||[];
     locations=res.locations||[];
   }
+  saveLocalCache();
 };
 
-function logout(q){tok=null;me=null;localStorage.removeItem('tok');localStorage.removeItem('me');hdr();nav();authView();if(q)toast('Sesi habis, silakan login ulang')}
+function logout(q){tok=null;me=null;parts=[];locations=[];localStorage.removeItem('tok');localStorage.removeItem('me');localStorage.removeItem('cache_parts');localStorage.removeItem('cache_locs');hdr();nav();authView();if(q)toast('Sesi habis, silakan login ulang')}
 
 function hdr(){
   $('#who').textContent=me?me.n+' ('+me.nip+')':'';
@@ -1318,7 +1325,11 @@ function listView(){
   };
 
   draw();
-  $('#q').oninput=()=>{curPage=1;draw()};
+  let searchTimer=null;
+  $('#q').oninput=()=>{
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{curPage=1;draw()},120);
+  };
   $('#fs').onchange=()=>{curPage=1;draw()};
   $('#modeCards').onclick=()=>{
     listMode='cards';localStorage.setItem('listMode','cards');
@@ -1817,5 +1828,17 @@ async function admView(){
   });
 }
 
-if(me&&tok){hdr();nav();run(load).then(()=>go('list'))}else authView();
+if(me&&tok){
+  hdr();
+  nav();
+  if(parts.length){
+    go('list');
+    load().then(()=>{
+      if(view==='list')listView();
+      else if(view==='sum')sumView();
+    }).catch(()=>{});
+  }else{
+    run(load).then(()=>go('list'));
+  }
+}else authView();
 </script></body></html>
