@@ -1074,10 +1074,15 @@ function inView(p){
   $('#inpCam').onchange=handleFile;
   $('#inpGal').onchange=handleFile;
 
-  if(!p)$('#sc').onclick=()=>scan(c=>{
-    $('#f_bc').value=c;
-    const x=parts.find(r=>r.bc===c);
-    if(x&&confirm('Barcode sudah terdaftar. Edit data part ini?'))go('in',x);
+  if(!p)$('#sc').onclick=()=>scan(async c=>{
+    const code=c.toUpperCase();
+    $('#f_bc').value=code;
+    const x=parts.find(r=>r.bc===code);
+    if(x && await askConfirm({
+      title:'Barcode Sudah Terdaftar',
+      msg:'Barcode '+code+' sudah ada di database. Buka mode edit untuk memperbarui data part ini?',
+      okText:'Edit Data'
+    }))go('in',x);
   });
 
   $('#sv').onclick=()=>run(async()=>{
@@ -1299,11 +1304,16 @@ function listView(){
     const target=e.target.closest('.item, .row-item');
     if(target)detail(target.dataset.bc);
   };
-  $('#sc').onclick=()=>scan(c=>{
+  $('#sc').onclick=()=>scan(async c=>{
     const code=c.toUpperCase();
     if(parts.some(p=>p.bc===code))detail(code);
-    else if(confirm('Barcode '+code+' belum terdaftar. Input sekarang?')){go('in');$('#f_bc').value=code}
-    else{$('#q').value=code;draw()}
+    else if(await askConfirm({
+      title:'Barcode Belum Terdaftar',
+      msg:'Barcode '+code+' belum ditemukan di database. Lanjutkan ke form Input Data sekarang?',
+      okText:'Input Sekarang',
+      cancelText:'Cari Saja'
+    })){go('in');$('#f_bc').value=code}
+    else{$('#q').value=code;curPage=1;draw()}
   });
 }
 
@@ -1337,9 +1347,13 @@ function detail(bc){run(async()=>{
     await load();toast('Update tersimpan');closeM();detail(bc);if(view==='list')listView();
   });
   $('#ed').onclick=()=>{closeM();go('in',p)};
-  $('#dl').onclick=()=>{
-    if(confirm('Hapus part '+bc+'? Aktivitas penghapusan akan dicatat pada log sistem.'))
-      run(async()=>{await api('del',{bc});await load();closeM();toast('Part dihapus');go('list')});
+  $('#dl').onclick=async()=>{
+    if(await askConfirm({
+      title:'Hapus Data Part',
+      msg:'Yakin ingin menghapus part '+bc+'? Aktivitas penghapusan ini akan dicatat secara permanen pada Audit Trail Admin.',
+      okText:'Ya, Hapus',
+      danger:true
+    }))run(async()=>{await api('del',{bc});await load();closeM();toast('Part berhasil dihapus');go('list')});
   };
 })}
 
@@ -1358,6 +1372,40 @@ function closeM(){
   document.body.style.overflow='';
   const d=$('#md');if(d)d.remove();
   if(onc){const f=onc;onc=null;f()}
+}
+
+function askConfirm({title='Konfirmasi',msg='',okText='Ya, Lanjutkan',cancelText='Batal',danger=false}){
+  return new Promise(resolve=>{
+    const oldSub=$('#subMd');
+    if(oldSub)oldSub.remove();
+
+    const overlay=document.createElement('div');
+    overlay.id='subMd';
+    overlay.innerHTML=`
+      <div class="sub-box" role="dialog" aria-modal="true">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <h3 style="margin:0;font-size:15.5px">${esc(title)}</h3>
+          <button type="button" class="s" id="cfClose" aria-label="Tutup" style="width:30px;height:30px;padding:0;border-radius:50%">${ICO.close}</button>
+        </div>
+        <p style="font-size:13px;color:#334155;margin:0 0 16px;line-height:1.5">${esc(msg)}</p>
+        <div class="row" style="margin:0">
+          <button type="button" class="s" id="cfCancel" style="flex:1">${esc(cancelText)}</button>
+          <button type="button" class="${danger?'d':'p'}" id="cfOk" style="flex:1;padding:10px 14px">${esc(okText)}</button>
+        </div>
+      </div>`;
+
+    const finish=val=>{
+      overlay.remove();
+      resolve(val);
+    };
+
+    overlay.onclick=e=>{if(e.target===overlay)finish(false)};
+    document.body.append(overlay);
+    $('#cfClose').onclick=()=>finish(false);
+    $('#cfCancel').onclick=()=>finish(false);
+    $('#cfOk').onclick=()=>finish(true);
+    requestAnimationFrame(()=>$('#cfOk').focus());
+  });
 }
 
 function scan(cb){
@@ -1554,7 +1602,17 @@ async function admView(){
         requestAnimationFrame(()=>$('#rstPw').focus());
         return;
       }
-      if(op==='del'&&!confirm('Hapus pengguna '+nip+'?'))return;
+      if(op==='del'){
+        askConfirm({
+          title:'Hapus Pengguna',
+          msg:'Yakin ingin menghapus akun pengguna dengan NIP '+nip+'? Tindakan ini tidak dapat dibatalkan.',
+          okText:'Ya, Hapus Akun',
+          danger:true
+        }).then(ok=>{
+          if(ok)run(async()=>{await api('uact',{nip,op:'del'});toast('Pengguna '+nip+' dihapus');admView()});
+        });
+        return;
+      }
       run(async()=>{await api('uact',{nip,op:op==='approve'?'on':op});toast('Berhasil');admView()});
     };
   });
