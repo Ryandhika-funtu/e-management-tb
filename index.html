@@ -886,15 +886,40 @@ function authView(reg){
   });
 }
 
-// Baca file gambar asli tanpa kompresi/ekstraksi untuk diunggah langsung ke Google Drive
-function readOriginalImage(file){
+// Kompresi gambar otomatis sebelum diunggah (maks. 1280px, JPEG 78%) agar upload & download cepat
+function compressImage(file, maxDim = 1280, quality = 0.78){
   return new Promise((resolve,reject)=>{
     if(!file || !file.type.startsWith('image/')){
       reject(new Error('File yang dipilih harus berupa gambar'));
       return;
     }
     const reader=new FileReader();
-    reader.onload=e=>resolve(e.target.result);
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width;
+        let h=img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>h){
+            h=Math.round(h*(maxDim/w));
+            w=maxDim;
+          }else{
+            w=Math.round(w*(maxDim/h));
+            h=maxDim;
+          }
+        }
+        const canvas=document.createElement('canvas');
+        canvas.width=w;
+        canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.fillStyle='#ffffff';
+        ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=()=>reject(new Error('Gagal memproses file gambar'));
+      img.src=e.target.result;
+    };
     reader.onerror=()=>reject(new Error('Gagal membaca file gambar'));
     reader.readAsDataURL(file);
   });
@@ -922,7 +947,7 @@ function renderPhotoWidget(highlightMissing){
         <button type="button" class="s" id="btnCam">${ICO.camera}<span>Ambil Foto</span></button>
         <button type="button" class="s" id="btnGal">${ICO.gallery}<span>Pilih Galeri</span></button>
       </div>
-      <div class="photo-hint">Wajib mengambil foto part langsung dari kamera atau memilih dari galeri (kualitas asli).</div>`;
+      <div class="photo-hint">Wajib mengambil foto part langsung dari kamera atau memilih dari galeri (otomatis dikompresi agar cepat).</div>`;
   }
   $('#btnCam').onclick=()=>$('#inpCam').click();
   $('#btnGal').onclick=()=>$('#inpGal').click();
@@ -1078,9 +1103,10 @@ function inView(p){
     const file=e.target.files && e.target.files[0];
     if(!file)return;
     try{
-      photoData=await readOriginalImage(file);
+      photoData=await compressImage(file);
+      const estKb=Math.round((photoData.length*3)/4/1024);
       renderPhotoWidget(false);
-      toast('Foto asli siap disimpan');
+      toast('Foto siap disimpan (~'+estKb+' KB)');
     }catch(err){
       toast(err.message);
     }finally{
