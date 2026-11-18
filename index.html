@@ -316,6 +316,23 @@ button.ex:hover{background:#d1fae5}
   font-size:12px;font-weight:600;color:var(--muted);
 }
 
+/* Custom Searchable Dropdown (Current Location) */
+.loc-wrap{position:relative;width:100%}
+.loc-dd{
+  position:absolute;left:0;right:0;top:calc(100% + 4px);
+  max-height:210px;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:10px;box-shadow:var(--shadow-lg);
+  z-index:35;display:none;padding:4px;
+}
+.loc-dd.open{display:block;animation:fadeIn .12s ease}
+.loc-opt{
+  padding:9px 11px;font-size:13.5px;font-weight:500;color:var(--text);
+  border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+}
+.loc-opt:hover,.loc-opt:active{background:var(--blue-soft);color:var(--navy)}
+.loc-opt.new-opt{color:var(--blue);font-weight:600;background:#f8fafc;border-top:1px dashed var(--border-strong);margin-top:2px}
+
 /* View Mode Switcher & Table Layout */
 .view-toggle{
   display:inline-flex;
@@ -367,26 +384,69 @@ button.ex:hover{background:#d1fae5}
   vertical-align:middle;
 }
 .part-tbl tr:last-child td{border-bottom:none}
-.part-tbl tbody tr{cursor:pointer;transition:background .12s}
-.part-tbl tbody tr:hover{background:#f8fafc}
+.part-tbl tbody tr{cursor:pointer;transition:filter .12s}
+.part-tbl tbody tr.row-ok{background:#f2fbf5}
+.part-tbl tbody tr.row-un{background:#fff5f5}
+.part-tbl tbody tr:hover{filter:brightness(.97)}
 
-/* Part List Items */
+/* Part List Items (Soft Status Tint) */
 .item{
   width:100%;
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-left:4px solid var(--accent);
+  background:#fff5f5;
+  border:1px solid #fecaca;
+  border-left:4px solid var(--red);
   border-radius:var(--radius);
   padding:13px 14px;margin-bottom:10px;
   cursor:pointer;box-shadow:var(--shadow-sm);
-  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;
+  transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;
 }
 .item:hover{
   transform:translateY(-1px);
   box-shadow:var(--shadow-md);
-  border-color:var(--border-strong);
+  filter:brightness(.985);
 }
-.item.ok{border-left-color:var(--green)}
+.item.ok{
+  background:#f2fbf5;
+  border-color:#bbf7d0;
+  border-left-color:var(--green);
+}
+
+/* Pagination Bar */
+.pg-bar{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-top:10px;box-shadow:var(--shadow-sm);
+}
+.pg-size{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600}
+.pg-size select{width:auto;margin:0;padding:5px 8px;font-size:12px;border-radius:7px}
+.pg-ctrl{display:flex;align-items:center;gap:6px;margin-left:auto}
+.pg-ctrl button{padding:5px 10px;font-size:12px;border-radius:7px}
+.pg-ctrl button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.pg-info{font-size:12px;font-weight:600;color:var(--navy);padding:0 4px}
+
+/* Summary Dashboard */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px;box-shadow:var(--shadow-sm);border-top:3px solid var(--navy);
+}
+.kpi-card.ok{border-top-color:var(--green);background:#f7fcf9}
+.kpi-card.un{border-top-color:var(--red);background:#fff8f8}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.kpi-val{font-size:21px;font-weight:700;color:var(--navy);margin-top:3px;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi-card.ok .kpi-val{color:var(--green-text)}
+.kpi-card.un .kpi-val{color:var(--red-text)}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:500}
+.sum-row{padding:10px 0;border-bottom:1px solid var(--border)}
+.sum-row:last-child{border-bottom:none;padding-bottom:0}
+.sum-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+.sum-name{font-weight:700;font-size:13px;color:var(--navy)}
+.sum-pills{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.pill-ok{background:var(--green-soft);color:var(--green-text);padding:2px 7px;border-radius:999px}
+.pill-un{background:var(--red-soft);color:var(--red-text);padding:2px 7px;border-radius:999px}
+.pill-tot{background:#f1f5f9;color:var(--navy);padding:2px 7px;border-radius:999px}
+.prog-bar{height:7px;width:100%;background:#fee2e2;border-radius:999px;overflow:hidden;display:flex}
+.prog-ok{background:var(--green);height:100%;transition:width .3s ease}
 .item .row{justify-content:space-between;align-items:center;margin:0 0 6px}
 .item b{
   color:var(--navy);font-size:14.5px;font-weight:700;
@@ -621,7 +681,11 @@ const ICO = {
   fileSheet: `<svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
   filePdf: `<svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-2h1.5a1 1 0 0 1 0 2H9z"/></svg>`,
   grid: `<svg class="ico" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
-  table: `<svg class="ico" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>`
+  table: `<svg class="ico" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>`,
+  chart: `<svg class="ico ico-lg" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  check: `<svg class="ico" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
+  userCheck: `<svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>`,
+  userX: `<svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>`
 };
 
 const S=[
@@ -635,7 +699,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=[],locations=[],view='list',listMode=localStorage.getItem('listMode')||'cards',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=[],locations=[],view='list',listMode=localStorage.getItem('listMode')||'cards',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,edit=null,sc=null,onc=null,photoData='';
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
 
@@ -717,6 +781,7 @@ function nav(){
   $('#nav').innerHTML=me?[
     ['in',ICO.plus,'Input Data'],
     ['list',ICO.list,'Daftar'],
+    ['sum',ICO.chart,'Summary'],
     ...(me.r==='admin'?[['adm',ICO.admin,'Admin']]:[])
   ].map(([k,i,l])=>`<button class="${view===k?'on':''}" data-v=${k}>${i}<span>${l}</span></button>`).join(''):'';
 }
@@ -724,7 +789,7 @@ $('#nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
 function go(v,p){
   view=v;
   nav();
-  ({in:()=>inView(p),list:listView,adm:admView})[v]();
+  ({in:()=>inView(p),list:listView,sum:sumView,adm:admView})[v]();
   requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
 }
 
@@ -792,30 +857,59 @@ function renderPhotoWidget(highlightMissing){
   if($('#btnDelPhoto'))$('#btnDelPhoto').onclick=()=>{photoData='';renderPhotoWidget(true)};
 }
 
-function buildLocationDatalist(){
-  const list=Array.from(new Set([
+function getAllLocations(){
+  return Array.from(new Set([
     ...locations,
     ...parts.map(p=>String(p.loc||'').trim().toUpperCase()).filter(Boolean)
-  ]));
-  return list.map(x=>`<option value="${esc(x)}">`).join('');
+  ])).sort();
 }
 
-function field([k,l,t,o],v){
+function attachLocationDropdown(inp,dd){
+  if(!inp||!dd)return;
+  const render=()=>{
+    const q=inp.value.trim().toUpperCase();
+    const list=getAllLocations();
+    const filtered=q?list.filter(x=>x.includes(q)):list;
+    let html=filtered.map(x=>`<div class="loc-opt" data-val="${esc(x)}"><span>${esc(x)}</span></div>`).join('');
+    if(q && !list.includes(q)){
+      html+=`<div class="loc-opt new-opt" data-val="${esc(q)}">+ Tambah lokasi baru: "${esc(q)}"</div>`;
+    }
+    dd.innerHTML=html||'<div class="loc-opt" style="color:var(--muted);cursor:default">Ketik nama lokasi baru...</div>';
+    dd.classList.add('open');
+  };
+  inp.addEventListener('focus',render);
+  inp.addEventListener('click',render);
+  inp.addEventListener('input',render);
+  dd.addEventListener('mousedown',e=>{
+    const opt=e.target.closest('.loc-opt[data-val]');
+    if(!opt)return;
+    e.preventDefault();
+    inp.value=opt.dataset.val;
+    dd.classList.remove('open');
+  });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('.loc-wrap'))dd.classList.remove('open');
+  });
+}
+
+function field([k,l,t,o],v,req){
   const id='f_'+k;v=v||'';
-  if(t==='area')return `<label>${l}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
-  if(t==='sel')return `<label>${l}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
-  if(t==='loc_sel')return `<label>${l}<input id=${id} type="text" list="locList" placeholder="Ketik atau pilih lokasi..." autocomplete="off" value="${esc(v)}"><datalist id="locList">${buildLocationDatalist()}</datalist></label>`;
-  return `<label>${l}<input id=${id} type=${t||'text'} ${t==='number'?'inputmode=numeric':''} value="${esc(v)}"></label>`;
+  const mark=req?' <span style="color:var(--red)">*</span>':'';
+  if(t==='area')return `<label>${l}${mark}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
+  if(t==='sel')return `<label>${l}${mark}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+  if(t==='loc_sel')return `<label>${l}${mark}<div class="loc-wrap"><input id=${id} type="text" placeholder="Ketik atau pilih lokasi..." autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(v)}"><div class="loc-dd" id="${id}_dd"></div></div></label>`;
+  return `<label>${l}${mark}<input id=${id} type=${t||'text'} ${t==='number'?'inputmode=numeric':''} value="${esc(v)}"></label>`;
 }
 
 function inView(p){
   edit=p||null;
   const v=p||{status:'Unserviceable',qty:'1'};
   photoData=v.photo||'';
+  const optSections=['Pengesahan','Sisi Belakang (15), jika perlu'];
   app.innerHTML=`
     <div class=card>
       <h3>${p?'Edit part':'Input part baru'}</h3>
-      <label>Part Identification Code (barcode)
+      <label>Part Identification Code (barcode) <span style="color:var(--red)">*</span>
         <div class=row>
           <input id=f_bc value="${esc(v.bc||'')}" ${p?'readonly':''}>
           ${p?'':`<button class=s id=sc type=button>${ICO.scan}<span>Scan</span></button>`}
@@ -828,18 +922,18 @@ function inView(p){
       <input type="file" id="inpGal" accept="image/*" hidden>
       <div class="photo-box" id="photoWidget"></div>
     </div>`
-    +S.map(([t,fs])=>`<div class=card><h4>${t}</h4>${fs.map(f=>field(f,v[f[0]])).join('')}</div>`).join('')
+    +S.map(([t,fs])=>{
+      const isOptSec=optSections.includes(t);
+      return `<div class=card><h4><span>${t}</span>${isOptSec?'<span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Opsional</span>':'<span class="req-badge">Wajib</span>'}</h4>${fs.map(f=>field(f,v[f[0]],!isOptSec && f[0]!=='sn')).join('')}</div>`;
+    }).join('')
     +`<button class=p id=sv>Simpan Data</button>`;
 
   renderPhotoWidget(false);
+  attachLocationDropdown($('#f_loc'),$('#f_loc_dd'));
 
   // Sinkronisasi daftar lokasi terbaru dari sheet Current Location saat membuka form input
   api('locations').then(locs=>{
-    if(Array.isArray(locs)){
-      locations=locs;
-      const dl=$('#locList');
-      if(dl)dl.innerHTML=buildLocationDatalist();
-    }
+    if(Array.isArray(locs))locations=locs;
   }).catch(()=>{});
 
   // Auto-fill Owner (2) jika A/C REG / NHA (1) cocok, dan otomatis hapus jika A/C REG dihapus/diubah
@@ -900,10 +994,20 @@ function inView(p){
       $('#photoWidget').scrollIntoView({behavior:'smooth',block:'center'});
       throw new Error('Foto part wajib diambil terlebih dahulu');
     }
-    const locVal=$('#f_loc').value.trim();
-    if(!locVal){
-      $('#f_loc').focus();
-      throw new Error('Current Location wajib dipilih');
+    const optSections=['Pengesahan','Sisi Belakang (15), jika perlu'];
+    for(const [secTitle,fs] of S){
+      if(optSections.includes(secTitle))continue;
+      for(const [k,lbl] of fs){
+        if(k==='sn')continue;
+        const el=$('#f_'+k);
+        if(!el || !String(el.value||'').trim()){
+          if(el){
+            el.scrollIntoView({behavior:'smooth',block:'center'});
+            el.focus();
+          }
+          throw new Error(lbl+' wajib diisi');
+        }
+      }
     }
     const q={bc,photo:photoData};
     S.forEach(([,fs])=>fs.forEach(([k])=>q[k]=$('#f_'+k).value));
@@ -993,16 +1097,40 @@ function listView(){
     </div>
     <div id=ls></div>`;
 
+  curPage=1;
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
   const draw=()=>{
     const q=$('#q').value.toLowerCase(),f=$('#fs').value;
     const r=parts.filter(p=>(!f||isOk(p.status)===isOk(f))&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
-    $('#cnt').textContent=r.length+' part';
+    const total=r.length;
+    const totalPages=Math.max(1,Math.ceil(total/pageSize));
+    if(curPage>totalPages)curPage=totalPages;
+    const startIdx=(curPage-1)*pageSize;
+    const paged=r.slice(startIdx,startIdx+pageSize);
 
-    if(!r.length){
+    $('#cnt').textContent=total
+      ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part`
+      : '0 part';
+
+    if(!total){
       $('#ls').innerHTML='<div class="card ctr">Belum ada data. Buka menu Input Data untuk menambah part.</div>';
       return;
     }
+
+    const pgHtml=`
+      <div class="pg-bar">
+        <div class="pg-size">
+          <span>Tampilkan</span>
+          <select id="pgSel">
+            ${[20,50,100].map(n=>`<option value="${n}" ${pageSize===n?'selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pg-ctrl">
+          <button type="button" class="s" id="pgPrev" ${curPage<=1?'disabled':''}>&lsaquo; Prev</button>
+          <span class="pg-info">Hal ${curPage} / ${totalPages}</span>
+          <button type="button" class="s" id="pgNext" ${curPage>=totalPages?'disabled':''}>Next &rsaquo;</button>
+        </div>
+      </div>`;
 
     if(listMode==='table'){
       $('#ls').innerHTML=`
@@ -1020,8 +1148,8 @@ function listView(){
               </tr>
             </thead>
             <tbody>
-              ${r.map(p=>`
-                <tr class="row-item" data-bc="${esc(p.bc)}">
+              ${paged.map(p=>`
+                <tr class="row-item ${isOk(p.status)?'row-ok':'row-un'}" data-bc="${esc(p.bc)}">
                   <td><b>${esc(p.bc)}</b></td>
                   <td>${esc(p.ac)||'-'}</td>
                   <td>${esc(p.desc)||'-'}</td>
@@ -1032,9 +1160,9 @@ function listView(){
                 </tr>`).join('')}
             </tbody>
           </table>
-        </div>`;
+        </div>${pgHtml}`;
     }else{
-      $('#ls').innerHTML=r.map(p=>`
+      $('#ls').innerHTML=paged.map(p=>`
         <div class="item ${isOk(p.status)?'ok':''}" data-bc="${esc(p.bc)}">
           <div class=row>
             <b>${esc(p.bc)}</b>
@@ -1045,13 +1173,22 @@ function listView(){
             <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
             ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
           </small>
-        </div>`).join('');
+        </div>`).join('')+pgHtml;
     }
+
+    $('#pgSel').onchange=e=>{
+      pageSize=+e.target.value;
+      localStorage.setItem('pageSize',String(pageSize));
+      curPage=1;
+      draw();
+    };
+    $('#pgPrev').onclick=()=>{if(curPage>1){curPage--;draw();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#pgNext').onclick=()=>{if(curPage<totalPages){curPage++;draw();window.scrollTo({top:0,behavior:'smooth'})}};
   };
 
   draw();
-  $('#q').oninput=draw;
-  $('#fs').onchange=draw;
+  $('#q').oninput=()=>{curPage=1;draw()};
+  $('#fs').onchange=()=>{curPage=1;draw()};
   $('#modeCards').onclick=()=>{
     listMode='cards';localStorage.setItem('listMode','cards');
     $('#modeCards').classList.add('active');$('#modeTable').classList.remove('active');
@@ -1084,7 +1221,7 @@ function detail(bc){run(async()=>{
     <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
     ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(p.photo)}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
     <h4 style="margin-top:12px">Update lokasi / status</h4>
-    <label>Lokasi saat ini<input id=ul type="text" list="ulList" placeholder="Ketik atau pilih lokasi..." autocomplete="off" value="${esc(p.loc)}"><datalist id="ulList">${buildLocationDatalist()}</datalist></label>
+    <label>Lokasi saat ini<div class="loc-wrap"><input id=ul type="text" placeholder="Ketik atau pilih lokasi..." autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(p.loc)}"><div class="loc-dd" id="ul_dd"></div></div></label>
     <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
     <label>Catatan<input id=un></label>
     <button class=p id=ub>Simpan update</button>
@@ -1097,6 +1234,7 @@ function detail(bc){run(async()=>{
       <button class=s id=ed type=button>${ICO.edit}<span>Edit</span></button>
       <button class=d id=dl type=button>${ICO.trash}<span>Hapus</span></button>
     </div>`);
+  attachLocationDropdown($('#ul'),$('#ul_dd'));
   if($('#zoomPhoto'))$('#zoomPhoto').onclick=()=>window.open(p.photo,'_blank');
   $('#ub').onclick=()=>run(async()=>{
     const newLoc=$('#ul').value.trim();
@@ -1138,6 +1276,87 @@ function scan(cb){
     .catch(()=>{$('#rd').innerHTML='<p style="color:#fff;padding:14px">Kamera tidak bisa dibuka. Izinkan akses kamera di browser, dan pastikan halaman dibuka lewat HTTPS. Anda tetap bisa mengetik kode manual.</p>'});
 }
 
+function sumView(){
+  const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
+  const total=parts.length;
+  const serv=parts.filter(p=>isOk(p.status)).length;
+  const unserv=total-serv;
+  const pctServ=total?Math.round((serv/total)*100):0;
+
+  const groupBy=(fn)=>{
+    const map=new Map();
+    parts.forEach(p=>{
+      const key=fn(p)||'TIDAK DIKETAHUI';
+      if(!map.has(key))map.set(key,{name:key,ok:0,un:0,tot:0});
+      const g=map.get(key);
+      if(isOk(p.status))g.ok++;else g.un++;
+      g.tot++;
+    });
+    return Array.from(map.values()).sort((a,b)=>b.tot-a.tot);
+  };
+
+  const renderGroup=(items,filterType)=>items.length
+    ? items.map(g=>{
+        const pct=g.tot?Math.round((g.ok/g.tot)*100):0;
+        return `
+          <div class="sum-row" style="cursor:pointer" data-ftype="${filterType}" data-fval="${esc(g.name)}">
+            <div class="sum-head">
+              <span class="sum-name">${esc(g.name)}</span>
+              <div class="sum-pills">
+                <span class="pill-ok">${g.ok} SVC</span>
+                <span class="pill-un">${g.un} UNSVC</span>
+                <span class="pill-tot">${g.tot}</span>
+              </div>
+            </div>
+            <div class="prog-bar" title="Serviceable ${pct}%">
+              <div class="prog-ok" style="width:${pct}%"></div>
+            </div>
+          </div>`;
+      }).join('')
+    : '<small style="color:var(--muted)">Belum ada data.</small>';
+
+  const byLoc=groupBy(p=>String(p.loc||'').trim().toUpperCase());
+  const byAc=groupBy(p=>String(p.ac||'').trim().toUpperCase());
+
+  app.innerHTML=`
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-lbl">Total Part</div>
+        <div class="kpi-val">${total}</div>
+        <div class="kpi-sub">${byLoc.length} Lokasi | ${byAc.length} A/C</div>
+      </div>
+      <div class="kpi-card ok">
+        <div class="kpi-lbl">Serviceable</div>
+        <div class="kpi-val">${serv}</div>
+        <div class="kpi-sub">${pctServ}% dari total</div>
+      </div>
+      <div class="kpi-card un">
+        <div class="kpi-lbl">Un-Serviceable</div>
+        <div class="kpi-val">${unserv}</div>
+        <div class="kpi-sub">${total?100-pctServ:0}% dari total</div>
+      </div>
+    </div>
+    <div class="card">
+      <h4><span>Ringkasan per Current Location</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+      ${renderGroup(byLoc,'loc')}
+    </div>
+    <div class="card">
+      <h4><span>Ringkasan per A/C Reg / NHA</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+      ${renderGroup(byAc,'ac')}
+    </div>`;
+
+  app.onclick=e=>{
+    const row=e.target.closest('.sum-row[data-fval]');
+    if(!row)return;
+    const val=row.dataset.fval;
+    go('list');
+    if(val!=='TIDAK DIKETAHUI'){
+      $('#q').value=val;
+      $('#q').dispatchEvent(new Event('input'));
+    }
+  };
+}
+
 async function admView(){
   app.innerHTML=`
     <div class=card id=ul>Memuat pengguna...</div>
@@ -1149,9 +1368,12 @@ async function admView(){
       <div class=u>
         <div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${u.r==='admin'?'Admin':'User'} | ${L[u.st]||u.st}</small></div>
         <div class=a>
-          ${u.st==='pending'?`<button data-op=approve data-nip="${esc(u.nip)}">Setujui</button>`:''}
-          <button data-op=reset data-nip="${esc(u.nip)}">Reset password</button>
-          ${u.nip!==me.nip?`<button data-op=${u.st==='off'?'on':'off'} data-nip="${esc(u.nip)}">${u.st==='off'?'Aktifkan':'Nonaktifkan'}</button><button class=d data-op=del data-nip="${esc(u.nip)}">Hapus</button>`:''}
+          ${u.st==='pending'?`<button class=ex data-op=approve data-nip="${esc(u.nip)}" title="Setujui Akun" aria-label="Setujui Akun">${ICO.check}</button>`:''}
+          <button class=s data-op=reset data-nip="${esc(u.nip)}" title="Reset Password" aria-label="Reset Password">${ICO.key}</button>
+          ${u.nip!==me.nip?`
+            <button class="${u.st==='off'?'ex':'s'}" data-op=${u.st==='off'?'on':'off'} data-nip="${esc(u.nip)}" title="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}" aria-label="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}">${u.st==='off'?ICO.userCheck:ICO.userX}</button>
+            <button class=d data-op=del data-nip="${esc(u.nip)}" title="Hapus Pengguna" aria-label="Hapus Pengguna">${ICO.trash}</button>
+          `:''}
         </div>
       </div>`).join('');
 
