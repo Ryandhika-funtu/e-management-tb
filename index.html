@@ -515,6 +515,8 @@ nav button.on::before{
   z-index:50;display:flex;align-items:flex-end;justify-content:center;
   padding-top:calc(12px + env(safe-area-inset-top));
   overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:none;
   animation:fadeIn .18s ease;
 }
 @media(min-width:640px){
@@ -526,6 +528,8 @@ nav button.on::before{
   max-height:calc(100vh - 24px - env(safe-area-inset-top));
   max-height:calc(100dvh - 24px - env(safe-area-inset-top));
   overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
   border-radius:18px 18px 0 0;
   padding:14px 18px calc(24px + env(safe-area-inset-bottom));
   position:relative;box-shadow:var(--shadow-lg);
@@ -1419,20 +1423,45 @@ function detail(bc){run(async()=>{
   };
 })}
 
+let savedScrollY=0;
+function lockBodyScroll(){
+  if(document.body.style.position==='fixed')return;
+  savedScrollY=window.scrollY||window.pageYOffset||0;
+  document.body.style.position='fixed';
+  document.body.style.top=-savedScrollY+'px';
+  document.body.style.left='0';
+  document.body.style.right='0';
+  document.body.style.width='100%';
+  document.body.style.overflow='hidden';
+}
+function unlockBodyScroll(){
+  if(document.body.style.position!=='fixed')return;
+  document.body.style.position='';
+  document.body.style.top='';
+  document.body.style.left='';
+  document.body.style.right='';
+  document.body.style.width='';
+  document.body.style.overflow='';
+  window.scrollTo(0,savedScrollY);
+}
+
 function modal(h,c){
   closeM();onc=c;
-  document.body.style.overflow='hidden';
+  lockBodyScroll();
   const d=document.createElement('div');
   d.id='md';
   d.innerHTML=`<div class=sheet><button class=x type=button aria-label="Tutup">${ICO.close}</button>${h}</div>`;
   d.querySelector('.x').onclick=closeM;
   d.onclick=e=>{if(e.target===d)closeM()};
+  d.addEventListener('touchmove',e=>{
+    if(!e.target.closest('.sheet'))e.preventDefault();
+  },{passive:false});
   document.body.append(d);
   requestAnimationFrame(()=>{const s=d.querySelector('.sheet');if(s)s.scrollTop=0});
 }
 function closeM(){
-  document.body.style.overflow='';
   const d=$('#md');if(d)d.remove();
+  unlockBodyScroll();
   if(onc){const f=onc;onc=null;f()}
 }
 
