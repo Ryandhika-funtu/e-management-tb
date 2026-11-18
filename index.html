@@ -1133,18 +1133,35 @@ function downloadBase64File(base64,fileName,mimeType){
 }
 
 function openExportModal(){
+  const qEl=$('#q');
+  const fsEl=$('#fs');
+  const searchVal=(view==='list' && qEl)?qEl.value.trim():'';
+  const statusVal=(view==='list' && fsEl)?fsEl.value:'';
+  const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
+
+  let selectedItems=[];
+  if(searchVal){
+    const qLow=searchVal.toLowerCase();
+    selectedItems=parts.filter(p=>
+      (!statusVal || isOk(p.status)===isOk(statusVal)) &&
+      [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow)
+    );
+  }
+
   const allLocs=Array.from(new Set([
     ...locations,
     ...parts.map(p=>String(p.loc||'').trim()).filter(Boolean)
   ]));
+
   modal(`
     <h3>Export Laporan Holding TB</h3>
     <p style="font-size:13px;color:var(--muted);margin-top:-4px">
-      Pilih lokasi part dan format file yang ingin diunduh (Layout Landscape A4).
+      Pilih cakupan data dan format file yang ingin diunduh (Layout Landscape A4).
     </p>
-    <label>Filter Current Location
+    <label>Cakupan Data / Current Location
       <select id="expLoc">
-        <option value="ALL">Semua Lokasi (${parts.length} part)</option>
+        ${searchVal?`<option value="SELECTED" selected>Export Selection Data (${selectedItems.length} part - "${esc(searchVal)}")</option>`:''}
+        <option value="ALL" ${!searchVal?'selected':''}>Semua Lokasi (${parts.length} part)</option>
         ${allLocs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')}
       </select>
     </label>
@@ -1157,7 +1174,13 @@ function openExportModal(){
   `);
   const triggerExport=fmt=>run(async()=>{
     const loc=$('#expLoc').value;
-    const res=await api('export',{loc,fmt});
+    if(loc==='SELECTED' && selectedItems.length===0){
+      throw new Error('Tidak ada data hasil pencarian untuk diexport');
+    }
+    const payload=loc==='SELECTED'
+      ? {loc,fmt,bcs:selectedItems.map(p=>p.bc)}
+      : {loc,fmt};
+    const res=await api('export',payload);
     downloadBase64File(res.base64,res.fileName,res.mimeType);
     closeM();
     toast('File '+res.fileName+' berhasil diunduh');
