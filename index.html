@@ -792,23 +792,19 @@ function renderPhotoWidget(highlightMissing){
   if($('#btnDelPhoto'))$('#btnDelPhoto').onclick=()=>{photoData='';renderPhotoWidget(true)};
 }
 
-function buildLocationOptions(selectedVal){
-  const list=[...locations];
-  if(selectedVal && !list.includes(selectedVal)){
-    list.unshift(selectedVal);
-  }
-  if(list.length===0){
-    return `<option value="">-- Belum ada lokasi di sheet Current Location --</option>`;
-  }
-  return `<option value="">-- Pilih Lokasi --</option>`+
-    list.map(x=>`<option value="${esc(x)}" ${x===selectedVal?'selected':''}>${esc(x)}</option>`).join('');
+function buildLocationDatalist(){
+  const list=Array.from(new Set([
+    ...locations,
+    ...parts.map(p=>String(p.loc||'').trim().toUpperCase()).filter(Boolean)
+  ]));
+  return list.map(x=>`<option value="${esc(x)}">`).join('');
 }
 
 function field([k,l,t,o],v){
   const id='f_'+k;v=v||'';
   if(t==='area')return `<label>${l}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
   if(t==='sel')return `<label>${l}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
-  if(t==='loc_sel')return `<label>${l}<select id=${id}>${buildLocationOptions(v)}</select></label>`;
+  if(t==='loc_sel')return `<label>${l}<input id=${id} type="text" list="locList" placeholder="Ketik atau pilih lokasi..." autocomplete="off" value="${esc(v)}"><datalist id="locList">${buildLocationDatalist()}</datalist></label>`;
   return `<label>${l}<input id=${id} type=${t||'text'} ${t==='number'?'inputmode=numeric':''} value="${esc(v)}"></label>`;
 }
 
@@ -841,10 +837,25 @@ function inView(p){
   api('locations').then(locs=>{
     if(Array.isArray(locs)){
       locations=locs;
-      const sel=$('#f_loc');
-      if(sel)sel.innerHTML=buildLocationOptions(v.loc||'');
+      const dl=$('#locList');
+      if(dl)dl.innerHTML=buildLocationDatalist();
     }
   }).catch(()=>{});
+
+  // Auto-fill Owner (2) jika A/C REG / NHA (1) sudah pernah tersimpan sebelumnya
+  const acInput=$('#f_ac'),ownerInput=$('#f_owner');
+  if(acInput && ownerInput){
+    const autoFillOwner=()=>{
+      const acVal=acInput.value.trim().toUpperCase();
+      if(!acVal)return;
+      const matched=parts.find(item=>String(item.ac||'').trim().toUpperCase()===acVal && String(item.owner||'').trim());
+      if(matched){
+        ownerInput.value=String(matched.owner).trim().toUpperCase();
+      }
+    };
+    acInput.addEventListener('input',autoFillOwner);
+    acInput.addEventListener('change',autoFillOwner);
+  }
 
   const handleFile=async e=>{
     const file=e.target.files && e.target.files[0];
@@ -1060,7 +1071,7 @@ function detail(bc){run(async()=>{
     <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
     ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(p.photo)}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
     <h4 style="margin-top:12px">Update lokasi / status</h4>
-    <label>Lokasi saat ini<select id=ul>${buildLocationOptions(p.loc)}</select></label>
+    <label>Lokasi saat ini<input id=ul type="text" list="ulList" placeholder="Ketik atau pilih lokasi..." autocomplete="off" value="${esc(p.loc)}"><datalist id="ulList">${buildLocationDatalist()}</datalist></label>
     <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
     <label>Catatan<input id=un></label>
     <button class=p id=ub>Simpan update</button>
