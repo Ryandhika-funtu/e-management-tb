@@ -842,15 +842,28 @@ function inView(p){
     }
   }).catch(()=>{});
 
-  // Auto-fill Owner (2) jika A/C REG / NHA (1) sudah pernah tersimpan sebelumnya
+  // Auto-fill Owner (2) jika A/C REG / NHA (1) cocok, dan otomatis hapus jika A/C REG dihapus/diubah
   const acInput=$('#f_ac'),ownerInput=$('#f_owner');
   if(acInput && ownerInput){
+    ownerInput.addEventListener('input',()=>{
+      delete ownerInput.dataset.autofilled;
+    });
     const autoFillOwner=()=>{
       const acVal=acInput.value.trim().toUpperCase();
-      if(!acVal)return;
+      if(!acVal){
+        if(ownerInput.dataset.autofilled==='1'){
+          ownerInput.value='';
+          delete ownerInput.dataset.autofilled;
+        }
+        return;
+      }
       const matched=parts.find(item=>String(item.ac||'').trim().toUpperCase()===acVal && String(item.owner||'').trim());
       if(matched){
         ownerInput.value=String(matched.owner).trim().toUpperCase();
+        ownerInput.dataset.autofilled='1';
+      }else if(ownerInput.dataset.autofilled==='1'){
+        ownerInput.value='';
+        delete ownerInput.dataset.autofilled;
       }
     };
     acInput.addEventListener('input',autoFillOwner);
