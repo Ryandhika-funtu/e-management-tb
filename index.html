@@ -667,6 +667,7 @@ const ICO = {
   gallery: `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
   refresh: `<svg class="ico" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
   plus: `<svg class="ico ico-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+  plusSm: `<svg class="ico" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   list: `<svg class="ico ico-lg" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
   admin: `<svg class="ico ico-lg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
   user: `<svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
@@ -864,31 +865,28 @@ function getAllLocations(){
   ])).sort();
 }
 
-function attachLocationDropdown(inp,dd){
-  if(!inp||!dd)return;
-  const render=()=>{
-    const q=inp.value.trim().toUpperCase();
-    const list=getAllLocations();
-    const filtered=q?list.filter(x=>x.includes(q)):list;
-    let html=filtered.map(x=>`<div class="loc-opt" data-val="${esc(x)}"><span>${esc(x)}</span></div>`).join('');
-    if(q && !list.includes(q)){
-      html+=`<div class="loc-opt new-opt" data-val="${esc(q)}">+ Tambah lokasi baru: "${esc(q)}"</div>`;
+function buildLocationOptions(selectedVal){
+  const sel=String(selectedVal||'').trim().toUpperCase();
+  const list=getAllLocations();
+  if(sel && !list.includes(sel))list.unshift(sel);
+  return '<option value="">-- Pilih Current Location --</option>'
+    +list.map(x=>`<option value="${esc(x)}" ${x===sel?'selected':''}>${esc(x)}</option>`).join('');
+}
+
+function promptAddLocation(selectEl){
+  const raw=prompt('Masukkan nama Current Location baru:');
+  if(!raw)return;
+  const cleanLoc=raw.trim().toUpperCase();
+  if(!cleanLoc)return;
+  run(async()=>{
+    const updatedLocs=await api('add_loc',{loc:cleanLoc});
+    if(Array.isArray(updatedLocs))locations=updatedLocs;
+    else if(!locations.includes(cleanLoc))locations.push(cleanLoc);
+    if(selectEl){
+      selectEl.innerHTML=buildLocationOptions(cleanLoc);
+      selectEl.value=cleanLoc;
     }
-    dd.innerHTML=html||'<div class="loc-opt" style="color:var(--muted);cursor:default">Ketik nama lokasi baru...</div>';
-    dd.classList.add('open');
-  };
-  inp.addEventListener('focus',render);
-  inp.addEventListener('click',render);
-  inp.addEventListener('input',render);
-  dd.addEventListener('mousedown',e=>{
-    const opt=e.target.closest('.loc-opt[data-val]');
-    if(!opt)return;
-    e.preventDefault();
-    inp.value=opt.dataset.val;
-    dd.classList.remove('open');
-  });
-  document.addEventListener('click',e=>{
-    if(!e.target.closest('.loc-wrap'))dd.classList.remove('open');
+    toast('Lokasi "'+cleanLoc+'" ditambahkan ke database');
   });
 }
 
@@ -897,7 +895,7 @@ function field([k,l,t,o],v,req){
   const mark=req?' <span style="color:var(--red)">*</span>':'';
   if(t==='area')return `<label>${l}${mark}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
   if(t==='sel')return `<label>${l}${mark}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
-  if(t==='loc_sel')return `<label>${l}${mark}<div class="loc-wrap"><input id=${id} type="text" placeholder="Ketik atau pilih lokasi..." autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(v)}"><div class="loc-dd" id="${id}_dd"></div></div></label>`;
+  if(t==='loc_sel')return `<label>${l}${mark}<div class="row" style="margin-bottom:0"><select id=${id}>${buildLocationOptions(v)}</select><button type="button" class="s" id="${id}_add" title="Tambah Lokasi Baru" aria-label="Tambah Lokasi Baru" style="padding:0 13px">${ICO.plusSm}</button></div></label>`;
   return `<label>${l}${mark}<input id=${id} type=${t||'text'} ${t==='number'?'inputmode=numeric':''} value="${esc(v)}"></label>`;
 }
 
@@ -929,11 +927,15 @@ function inView(p){
     +`<button class=p id=sv>Simpan Data</button>`;
 
   renderPhotoWidget(false);
-  attachLocationDropdown($('#f_loc'),$('#f_loc_dd'));
+  $('#f_loc_add').onclick=()=>promptAddLocation($('#f_loc'));
 
   // Sinkronisasi daftar lokasi terbaru dari sheet Current Location saat membuka form input
   api('locations').then(locs=>{
-    if(Array.isArray(locs))locations=locs;
+    if(Array.isArray(locs)){
+      locations=locs;
+      const curVal=$('#f_loc').value;
+      $('#f_loc').innerHTML=buildLocationOptions(curVal);
+    }
   }).catch(()=>{});
 
   // Auto-fill Owner (2) jika A/C REG / NHA (1) cocok, dan otomatis hapus jika A/C REG dihapus/diubah
@@ -1221,7 +1223,7 @@ function detail(bc){run(async()=>{
     <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
     ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(p.photo)}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
     <h4 style="margin-top:12px">Update lokasi / status</h4>
-    <label>Lokasi saat ini<div class="loc-wrap"><input id=ul type="text" placeholder="Ketik atau pilih lokasi..." autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(p.loc)}"><div class="loc-dd" id="ul_dd"></div></div></label>
+    <label>Lokasi saat ini<div class="row" style="margin-bottom:0"><select id=ul>${buildLocationOptions(p.loc)}</select><button type="button" class="s" id="ul_add" title="Tambah Lokasi Baru" aria-label="Tambah Lokasi Baru" style="padding:0 13px">${ICO.plusSm}</button></div></label>
     <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
     <label>Catatan<input id=un></label>
     <button class=p id=ub>Simpan update</button>
@@ -1234,7 +1236,7 @@ function detail(bc){run(async()=>{
       <button class=s id=ed type=button>${ICO.edit}<span>Edit</span></button>
       <button class=d id=dl type=button>${ICO.trash}<span>Hapus</span></button>
     </div>`);
-  attachLocationDropdown($('#ul'),$('#ul_dd'));
+  $('#ul_add').onclick=()=>promptAddLocation($('#ul'));
   if($('#zoomPhoto'))$('#zoomPhoto').onclick=()=>window.open(p.photo,'_blank');
   $('#ub').onclick=()=>run(async()=>{
     const newLoc=$('#ul').value.trim();
@@ -1278,78 +1280,108 @@ function scan(cb){
 
 function sumView(){
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
-  const total=parts.length;
-  const serv=parts.filter(p=>isOk(p.status)).length;
-  const unserv=total-serv;
-  const pctServ=total?Math.round((serv/total)*100):0;
-
-  const groupBy=(fn)=>{
-    const map=new Map();
-    parts.forEach(p=>{
-      const key=fn(p)||'TIDAK DIKETAHUI';
-      if(!map.has(key))map.set(key,{name:key,ok:0,un:0,tot:0});
-      const g=map.get(key);
-      if(isOk(p.status))g.ok++;else g.un++;
-      g.tot++;
-    });
-    return Array.from(map.values()).sort((a,b)=>b.tot-a.tot);
-  };
-
-  const renderGroup=(items,filterType)=>items.length
-    ? items.map(g=>{
-        const pct=g.tot?Math.round((g.ok/g.tot)*100):0;
-        return `
-          <div class="sum-row" style="cursor:pointer" data-ftype="${filterType}" data-fval="${esc(g.name)}">
-            <div class="sum-head">
-              <span class="sum-name">${esc(g.name)}</span>
-              <div class="sum-pills">
-                <span class="pill-ok">${g.ok} SVC</span>
-                <span class="pill-un">${g.un} UNSVC</span>
-                <span class="pill-tot">${g.tot}</span>
-              </div>
-            </div>
-            <div class="prog-bar" title="Serviceable ${pct}%">
-              <div class="prog-ok" style="width:${pct}%"></div>
-            </div>
-          </div>`;
-      }).join('')
-    : '<small style="color:var(--muted)">Belum ada data.</small>';
-
-  const byLoc=groupBy(p=>String(p.loc||'').trim().toUpperCase());
-  const byAc=groupBy(p=>String(p.ac||'').trim().toUpperCase());
 
   app.innerHTML=`
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-lbl">Total Part</div>
-        <div class="kpi-val">${total}</div>
-        <div class="kpi-sub">${byLoc.length} Lokasi | ${byAc.length} A/C</div>
-      </div>
-      <div class="kpi-card ok">
-        <div class="kpi-lbl">Serviceable</div>
-        <div class="kpi-val">${serv}</div>
-        <div class="kpi-sub">${pctServ}% dari total</div>
-      </div>
-      <div class="kpi-card un">
-        <div class="kpi-lbl">Un-Serviceable</div>
-        <div class="kpi-val">${unserv}</div>
-        <div class="kpi-sub">${total?100-pctServ:0}% dari total</div>
+    <div class="card" style="padding:12px 14px">
+      <div class="row" style="margin-bottom:0">
+        <select id="sumSt">
+          <option value="">Semua Status</option>
+          <option value="Serviceable">Serviceable</option>
+          <option value="Unserviceable">Un-Serviceable</option>
+        </select>
+        <button type="button" class="s" id="sumRf" title="Muat Ulang Data">${ICO.refresh}</button>
+        <button type="button" class="ex" id="sumExp">${ICO.download}<span>Export</span></button>
       </div>
     </div>
-    <div class="card">
-      <h4><span>Ringkasan per Current Location</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
-      ${renderGroup(byLoc,'loc')}
-    </div>
-    <div class="card">
-      <h4><span>Ringkasan per A/C Reg / NHA</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
-      ${renderGroup(byAc,'ac')}
-    </div>`;
+    <div id="sumBody"></div>`;
 
-  app.onclick=e=>{
+  const renderSum=()=>{
+    const stFilter=$('#sumSt').value;
+    const filtered=parts.filter(p=>!stFilter || isOk(p.status)===isOk(stFilter));
+
+    const total=filtered.length;
+    const serv=filtered.filter(p=>isOk(p.status)).length;
+    const unserv=total-serv;
+    const pctServ=total?Math.round((serv/total)*100):0;
+
+    const groupBy=(fn)=>{
+      const map=new Map();
+      filtered.forEach(p=>{
+        const key=fn(p)||'TIDAK DIKETAHUI';
+        if(!map.has(key))map.set(key,{name:key,ok:0,un:0,tot:0});
+        const g=map.get(key);
+        if(isOk(p.status))g.ok++;else g.un++;
+        g.tot++;
+      });
+      return Array.from(map.values()).sort((a,b)=>b.tot-a.tot);
+    };
+
+    const renderGroup=(items,filterType)=>items.length
+      ? items.map(g=>{
+          const pct=g.tot?Math.round((g.ok/g.tot)*100):0;
+          return `
+            <div class="sum-row" style="cursor:pointer" data-ftype="${filterType}" data-fval="${esc(g.name)}">
+              <div class="sum-head">
+                <span class="sum-name">${esc(g.name)}</span>
+                <div class="sum-pills">
+                  ${stFilter!=='Unserviceable'?`<span class="pill-ok">${g.ok} SVC</span>`:''}
+                  ${stFilter!=='Serviceable'?`<span class="pill-un">${g.un} UNSVC</span>`:''}
+                  <span class="pill-tot">${g.tot}</span>
+                </div>
+              </div>
+              <div class="prog-bar" title="Serviceable ${pct}%">
+                <div class="prog-ok" style="width:${pct}%"></div>
+              </div>
+            </div>`;
+        }).join('')
+      : '<small style="color:var(--muted)">Tidak ada data untuk filter ini.</small>';
+
+    const byLoc=groupBy(p=>String(p.loc||'').trim().toUpperCase());
+    const byAc=groupBy(p=>String(p.ac||'').trim().toUpperCase());
+
+    $('#sumBody').innerHTML=`
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Total Part</div>
+          <div class="kpi-val">${total}</div>
+          <div class="kpi-sub">${byLoc.length} Lokasi | ${byAc.length} A/C</div>
+        </div>
+        <div class="kpi-card ok">
+          <div class="kpi-lbl">Serviceable</div>
+          <div class="kpi-val">${serv}</div>
+          <div class="kpi-sub">${pctServ}% dari tampilan</div>
+        </div>
+        <div class="kpi-card un">
+          <div class="kpi-lbl">Un-Serviceable</div>
+          <div class="kpi-val">${unserv}</div>
+          <div class="kpi-sub">${total?100-pctServ:0}% dari tampilan</div>
+        </div>
+      </div>
+      <div class="card">
+        <h4><span>Ringkasan per Current Location</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+        ${renderGroup(byLoc,'loc')}
+      </div>
+      <div class="card">
+        <h4><span>Ringkasan per A/C Reg / NHA</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+        ${renderGroup(byAc,'ac')}
+      </div>`;
+  };
+
+  renderSum();
+  $('#sumSt').onchange=renderSum;
+  $('#sumRf').onclick=()=>run(async()=>{await load();renderSum();toast('Data diperbarui')});
+  $('#sumExp').onclick=openExportModal;
+
+  $('#sumBody').onclick=e=>{
     const row=e.target.closest('.sum-row[data-fval]');
     if(!row)return;
     const val=row.dataset.fval;
+    const stFilter=$('#sumSt').value;
     go('list');
+    if(stFilter){
+      $('#fs').value=stFilter;
+      $('#fs').dispatchEvent(new Event('change'));
+    }
     if(val!=='TIDAK DIKETAHUI'){
       $('#q').value=val;
       $('#q').dispatchEvent(new Event('input'));
