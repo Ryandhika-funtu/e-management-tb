@@ -42,6 +42,15 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 
+/* SVG Icon Utility */
+.ico{
+  width:16px;height:16px;
+  stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;
+  fill:none;flex-shrink:0;display:inline-block;vertical-align:middle;
+}
+.ico-lg{width:20px;height:20px}
+
 /* Loading Spinner Overlay */
 #bz{
   position:fixed;inset:0;
@@ -87,7 +96,7 @@ header{
   box-shadow:0 2px 8px rgba(0,34,64,.04);
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  position:sticky;top:0;z-index:10;
+  position:sticky;top:0;z-index:20;
 }
 header::after{
   content:"";position:absolute;bottom:-1px;left:0;right:0;height:2px;
@@ -110,14 +119,38 @@ header .tt small{
   display:block;color:var(--muted);font-weight:500;font-size:12px;margin-top:2px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-#hb{display:flex;align-items:center;gap:6px;flex-shrink:0}
-#hb button{
-  padding:7px 11px;font-size:12px;border-radius:8px;
-  background:#f8fafc;border:1px solid var(--border);color:var(--text);
+
+/* User Account Dropdown */
+#hb{position:relative;flex-shrink:0}
+.acc-btn{
+  padding:8px 12px;font-size:12.5px;font-weight:600;border-radius:9px;
+  background:#f8fafc;border:1px solid var(--border-strong);color:var(--navy);
+  display:inline-flex;align-items:center;gap:6px;
 }
-#hb button:hover{background:#f1f5f9;border-color:var(--border-strong)}
-#hb #lo{color:var(--red-text);background:var(--red-soft);border-color:transparent}
-#hb #lo:hover{background:#fecaca}
+.acc-btn:hover{background:#f1f5f9;border-color:#94a3b8}
+.acc-menu{
+  position:absolute;right:0;top:calc(100% + 6px);
+  min-width:190px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:11px;
+  box-shadow:var(--shadow-lg);
+  padding:6px;
+  display:none;
+  flex-direction:column;
+  gap:2px;
+  z-index:25;
+}
+.acc-menu.open{display:flex;animation:fadeIn .14s ease}
+.acc-menu button{
+  width:100%;justify-content:flex-start;
+  background:transparent;color:var(--text);
+  padding:9px 11px;font-size:13px;font-weight:500;border-radius:8px;
+}
+.acc-menu button:hover{background:#f1f5f9;color:var(--navy)}
+.acc-menu button.danger{color:var(--red-text)}
+.acc-menu button.danger:hover{background:var(--red-soft)}
+.acc-sep{height:1px;background:var(--border);margin:4px 0}
 
 /* Main Container */
 main{max-width:680px;margin:0 auto;padding:14px 16px}
@@ -173,7 +206,7 @@ button{
   border:1px solid transparent;border-radius:9px;
   padding:10px 14px;cursor:pointer;
   background:var(--blue-soft);color:var(--blue);
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
   transition:all .15s ease;
 }
 button:hover{background:#dce7f7}
@@ -190,6 +223,40 @@ button.s{
 button.s:hover{background:#f1f5f9;border-color:#94a3b8}
 button.d{background:var(--red-soft);color:var(--red-text)}
 button.d:hover{background:#fecaca}
+
+/* Photo Capture & Preview Box */
+.photo-box{
+  border:1.5px dashed var(--border-strong);
+  background:#f8fafc;
+  border-radius:10px;
+  padding:14px;
+  text-align:center;
+}
+.photo-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.photo-preview{
+  position:relative;
+  margin-bottom:10px;
+  border-radius:9px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  background:#0f172a;
+}
+.photo-preview img{
+  display:block;
+  width:100%;
+  max-height:240px;
+  object-fit:contain;
+  margin:0 auto;
+}
+.photo-hint{
+  font-size:11.5px;
+  color:var(--muted);
+  margin-top:8px;
+}
 
 /* Row Utility */
 .row{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
@@ -227,7 +294,12 @@ button.d:hover{background:#fecaca}
   font-size:13.5px;font-weight:500;color:#1e293b;margin-bottom:6px;
 }
 .item small{
-  display:block;font-size:12px;color:var(--muted);line-height:1.45;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:12px;color:var(--muted);line-height:1.45;
+}
+.has-photo{
+  display:inline-flex;align-items:center;gap:4px;
+  color:var(--blue);font-weight:600;font-size:11.5px;flex-shrink:0;
 }
 
 /* Status Badges */
@@ -240,6 +312,7 @@ button.d:hover{background:#fecaca}
   content:"";width:6px;height:6px;border-radius:50%;background:currentColor;
 }
 .badge.ok{background:var(--green-soft);color:var(--green-text)}
+.badge.del{background:#f1f5f9;color:#475569}
 
 /* Bottom Navigation */
 nav{
@@ -256,7 +329,7 @@ nav{
 nav button{
   flex:1;max-width:220px;background:none;border:0;border-radius:10px;
   padding:7px 4px;font-size:11.5px;font-weight:600;
-  color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;
+  color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px;
   position:relative;
 }
 nav button:hover{background:#f8fafc;color:var(--navy)}
@@ -289,7 +362,7 @@ nav button.on::before{
 .sheet .x{
   position:absolute;right:14px;top:14px;
   width:32px;height:32px;padding:0;border-radius:50%;
-  background:#f1f5f9;color:var(--muted);font-size:14px;
+  background:#f1f5f9;color:var(--muted);
 }
 .sheet .x:hover{background:#e2e8f0;color:var(--text)}
 
@@ -301,6 +374,19 @@ nav button.on::before{
   width:100%;min-height:220px;background:#0f172a;
   border-radius:10px;overflow:hidden;border:1px solid var(--border-strong);
   margin-bottom:10px;
+}
+
+/* Detail Photo */
+.detail-photo{
+  margin:12px 0;
+  border-radius:10px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  background:#0f172a;
+  cursor:zoom-in;
+}
+.detail-photo img{
+  display:block;width:100%;max-height:260px;object-fit:contain;
 }
 
 /* Detail Definition List */
@@ -345,7 +431,7 @@ a:hover{text-decoration:underline}
   text-align:center;display:none;
 }
 
-/* Admin User List */
+/* Admin User List & Audit Logs */
 .u{
   display:flex;justify-content:space-between;gap:10px;align-items:center;
   padding:12px 0;border-bottom:1px solid var(--border);
@@ -355,6 +441,22 @@ a:hover{text-decoration:underline}
 .u small{color:var(--muted);font-size:12px}
 .u .a{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .u button{padding:6px 10px;font-size:12px;border-radius:7px}
+
+.log-item{
+  padding:10px 12px;
+  border-radius:9px;
+  background:#fef2f2;
+  border:1px solid #fecaca;
+  border-left:4px solid var(--red);
+  margin-bottom:8px;
+}
+.log-item:last-child{margin-bottom:0}
+.log-item .top{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  margin-bottom:4px;
+}
+.log-item b{color:var(--navy);font-size:13.5px}
+.log-item small{display:block;color:#475569;font-size:12px;line-height:1.4}
 </style></head><body>
 <div id="bz" aria-live="polite" aria-busy="true">
   <div class="sp-box">
@@ -367,14 +469,34 @@ a:hover{text-decoration:underline}
     <img src="https://lh3.googleusercontent.com/d/1YNUsjvIM5h6r0xlXyOhHwjdmAYwFYWaJ" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=view&id=1YNUsjvIM5h6r0xlXyOhHwjdmAYwFYWaJ'" alt="GMF AeroAsia">
     <div class="tt">e-Management Holding TB<small id="who"></small></div>
   </div>
-  <span id="hb"></span>
+  <div id="hb"></div>
 </header>
 <main id="app"></main><nav id="nav"></nav><div id="ts"></div>
 <script>
-const API='https://script.google.com/macros/s/AKfycbwQdxucpnHWW5fVRm0ddp3xuoHyKBW0JdbmSxtq3yT5PpDnzXArEG4FuJ3YC6465Qw3/exec'; // contoh: https://script.google.com/macros/s/XXXX/exec
+const API='https://script.google.com/macros/s/AKfycbwQdxucpnHWW5fVRm0ddp3xuoHyKBW0JdbmSxtq3yT5PpDnzXArEG4FuJ3YC6465Qw3/exec';
 const WA='https://wa.me/6281318427266';
 const RT=['','Inspection/Repair/Bench Check/Overhaul/Modification/Test/Others','Temporary Storage'];
 const WT=['','Inspection','Repair','Bench Check','Overhaul','Modification','Test','Calibration','Cleaning','Others'];
+
+// Professional Crisp SVG Icons
+const ICO = {
+  scan: `<svg class="ico" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>`,
+  camera: `<svg class="ico" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
+  gallery: `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+  refresh: `<svg class="ico" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
+  plus: `<svg class="ico ico-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+  list: `<svg class="ico ico-lg" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+  admin: `<svg class="ico ico-lg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  user: `<svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  chevron: `<svg class="ico" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`,
+  key: `<svg class="ico" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>`,
+  logout: `<svg class="ico" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+  edit: `<svg class="ico" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash: `<svg class="ico" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+  close: `<svg class="ico" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  imageSm: `<svg class="ico" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+};
+
 const S=[
 ['Identitas Part',[['ac','A/C REG / NHA (1)'],['owner','Owner (2)'],['desc','Description (3)'],['pn','Part Number (4)'],['sn','Serial Number (5)'],['qty','Qty (6)','number']]],
 ['Alasan Pelepasan (7)',[['rno','Order/Jobcard/MDR/PD Sheet No (7.a)'],['rtype','Jenis (7.b)','sel',RT],['rdet','Keterangan (7.b)']]],
@@ -383,105 +505,357 @@ const S=[
 ['Pengesahan',[['rby','Removed/Inspected by (10)'],['rdate','Date (11)','date'],['dby','Declared Serviceable by (12)'],['ddate','Date (13)','date']]],
 ['Status & Lokasi',[['status','Serviceable / Un-Serviceable (14)','sel',['Unserviceable','Serviceable']],['loc','Current Location']]],
 ['Sisi Belakang (15), jika perlu',[['pos','Pos'],['ref','Reference'],['tsn','TSN/CSN'],['tso','TSO/CSO'],['tbo','TBO'],['bdisc','Discrepancy','area']]]];
+
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=[],view='list',edit=null,sc=null,onc=null;
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=[],view='list',edit=null,sc=null,onc=null,photoData='';
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
+
 async function api(a,d){
- if(!/^https:/.test(API))throw new Error('URL Apps Script belum diisi di index.html');
- const r=await fetch(API,{method:'POST',body:JSON.stringify({a,t:tok,d})}),j=await r.json();
- if(!j.ok){if(/^Sesi/.test(j.e))logout(true);throw new Error(j.e)}return j.d}
+  // Gunakan google.script.run jika berjalan langsung di Apps Script Web App, atau fallback ke fetch API
+  if(window.google && google.script && google.script.run){
+    return new Promise((res,rej)=>{
+      google.script.run
+        .withSuccessHandler(j=>{
+          if(!j.ok){if(/^Sesi/.test(j.e))logout(true);rej(new Error(j.e))}
+          else res(j.d);
+        })
+        .withFailureHandler(err=>rej(new Error(err.message||'Gagal terhubung ke server')))
+        .apiCall({a,t:tok,d});
+    });
+  }
+  if(!/^https:/.test(API))throw new Error('URL Apps Script belum diisi di index.html');
+  const r=await fetch(API,{method:'POST',body:JSON.stringify({a,t:tok,d})}),j=await r.json();
+  if(!j.ok){if(/^Sesi/.test(j.e))logout(true);throw new Error(j.e)}
+  return j.d;
+}
+
 async function run(fn){$('#bz').classList.add('on');try{return await fn()}catch(e){toast(e.message)}finally{$('#bz').classList.remove('on')}}
 const load=async()=>{parts=await api('list')};
 
 function logout(q){tok=null;me=null;localStorage.removeItem('tok');localStorage.removeItem('me');hdr();nav();authView();if(q)toast('Sesi habis, silakan login ulang')}
-function hdr(){$('#who').textContent=me?me.n+' ('+me.nip+')':'';$('#hb').innerHTML=me?'<button id=cp>🔑</button> <button id=lo>Keluar</button>':'';
- if(me){$('#lo').onclick=()=>logout();$('#cp').onclick=()=>{const o=prompt('Password lama:');if(!o)return;const n=prompt('Password baru (min. 8, huruf + karakter spesial):');if(n)run(async()=>{await api('chpw',{old:o,pw:n});toast('Password diganti')})}}}
-function nav(){$('#nav').innerHTML=me?[['in','➕','Input Data'],['list','📋','Daftar'],...(me.r==='admin'?[['adm','⚙️','Admin']]:[])].map(([k,i,l])=>`<button class="${view===k?'on':''}" data-v=${k}>${i}<br>${l}</button>`).join(''):''}
+
+function hdr(){
+  $('#who').textContent=me?me.n+' ('+me.nip+')':'';
+  if(!me){$('#hb').innerHTML='';return}
+  $('#hb').innerHTML=`
+    <button class="acc-btn" id="accBtn" type="button" aria-expanded="false">
+      ${ICO.user}<span>Akun</span>${ICO.chevron}
+    </button>
+    <div class="acc-menu" id="accMenu" role="menu">
+      <button type="button" id="cp">${ICO.key}<span>Change Password</span></button>
+      <div class="acc-sep"></div>
+      <button type="button" class="danger" id="lo">${ICO.logout}<span>Log Out</span></button>
+    </div>`;
+  const btn=$('#accBtn'),menu=$('#accMenu');
+  btn.onclick=e=>{
+    e.stopPropagation();
+    const open=menu.classList.toggle('open');
+    btn.setAttribute('aria-expanded',open);
+  };
+  $('#lo').onclick=()=>{menu.classList.remove('open');logout()};
+  $('#cp').onclick=()=>{
+    menu.classList.remove('open');
+    const o=prompt('Password lama:');if(!o)return;
+    const n=prompt('Password baru (min. 8, huruf + karakter spesial):');
+    if(n)run(async()=>{await api('chpw',{old:o,pw:n});toast('Password berhasil diubah')});
+  };
+}
+document.addEventListener('click',e=>{
+  const menu=$('#accMenu');
+  if(menu && !e.target.closest('#hb'))menu.classList.remove('open');
+});
+
+function nav(){
+  $('#nav').innerHTML=me?[
+    ['in',ICO.plus,'Input Data'],
+    ['list',ICO.list,'Daftar'],
+    ...(me.r==='admin'?[['adm',ICO.admin,'Admin']]:[])
+  ].map(([k,i,l])=>`<button class="${view===k?'on':''}" data-v=${k}>${i}<span>${l}</span></button>`).join(''):'';
+}
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
 function go(v,p){view=v;nav();({in:()=>inView(p),list:listView,adm:admView})[v]();scrollTo(0,0)}
 
 function authView(reg){
- app.innerHTML=`<div class=card style="margin-top:24px"><h2>${reg?'Daftar akun':'Masuk'}</h2>
- <label>Nomor pegawai<input id=nip inputmode=text autocomplete=username></label>
- ${reg?'<label>Nama lengkap<input id=nm></label>':''}
- <label>Password<input id=pw type=password autocomplete=${reg?'new-password':'current-password'}></label>
- ${reg?'<p><small>Minimal 8 karakter, berisi huruf (a-z) dan karakter spesial.</small></p>':''}
- <button class=p id=go>${reg?'Daftar':'Masuk'}</button>
- <p class=ctr><a href=# id=sw>${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</a></p>
- <p class=ctr><small>Lupa password? <a href="${WA}" target=_blank rel=noopener>Hubungi admin via WhatsApp</a></small></p></div>`;
- $('#sw').onclick=e=>{e.preventDefault();authView(!reg)};
- $('#go').onclick=()=>run(async()=>{
-  const nip=$('#nip').value.trim(),pw=$('#pw').value;
-  if(reg){if(!/^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{8,}$/.test(pw))throw new Error('Password minimal 8 karakter, berisi huruf dan karakter spesial');
-   toast(await api('register',{nip,n:$('#nm').value,pw}));authView();return}
-  const r=await api('login',{nip,pw});tok=r.t;me=r.u;localStorage.setItem('tok',tok);localStorage.setItem('me',JSON.stringify(me));
-  hdr();await load();go('list')})}
+  app.innerHTML=`<div class=card style="margin-top:24px"><h2>${reg?'Daftar akun':'Masuk'}</h2>
+  <label>Nomor pegawai<input id=nip inputmode=text autocomplete=username></label>
+  ${reg?'<label>Nama lengkap<input id=nm></label>':''}
+  <label>Password<input id=pw type=password autocomplete=${reg?'new-password':'current-password'}></label>
+  ${reg?'<p><small>Minimal 8 karakter, berisi huruf (a-z) dan karakter spesial.</small></p>':''}
+  <button class=p id=go>${reg?'Daftar':'Masuk'}</button>
+  <p class=ctr><a href=# id=sw>${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</a></p>
+  <p class=ctr><small>Lupa password? <a href="${WA}" target=_blank rel=noopener>Hubungi admin via WhatsApp</a></small></p></div>`;
+  $('#sw').onclick=e=>{e.preventDefault();authView(!reg)};
+  $('#go').onclick=()=>run(async()=>{
+    const nip=$('#nip').value.trim(),pw=$('#pw').value;
+    if(reg){
+      if(!/^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{8,}$/.test(pw))throw new Error('Password minimal 8 karakter, berisi huruf dan karakter spesial');
+      toast(await api('register',{nip,n:$('#nm').value,pw}));authView();return;
+    }
+    const r=await api('login',{nip,pw});tok=r.t;me=r.u;localStorage.setItem('tok',tok);localStorage.setItem('me',JSON.stringify(me));
+    hdr();await load();go('list');
+  });
+}
+
+// Kompresi gambar di browser agar ringan disimpan di Google Sheets (< 45 KB)
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const maxDim=720;
+        let w=img.width,h=img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>h){h=Math.round(h*maxDim/w);w=maxDim}
+          else{w=Math.round(w*maxDim/h);h=maxDim}
+        }
+        canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        let dataUrl=canvas.toDataURL('image/jpeg',0.68);
+        if(dataUrl.length>45000){
+          dataUrl=canvas.toDataURL('image/jpeg',0.48);
+        }
+        resolve(dataUrl);
+      };
+      img.onerror=()=>reject(new Error('File gambar tidak dapat dibaca'));
+      img.src=e.target.result;
+    };
+    reader.onerror=()=>reject(new Error('Gagal membaca file gambar'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotoWidget(){
+  const box=$('#photoWidget');
+  if(!box)return;
+  if(photoData){
+    box.innerHTML=`
+      <div class="photo-preview">
+        <img src="${photoData}" alt="Preview Foto Part">
+      </div>
+      <div class="photo-actions">
+        <button type="button" class="s" id="btnCam">${ICO.camera}<span>Foto Ulang</span></button>
+        <button type="button" class="s" id="btnGal">${ICO.gallery}<span>Ganti Galeri</span></button>
+      </div>
+      <div style="margin-top:8px">
+        <button type="button" class="d" style="width:100%" id="btnDelPhoto">${ICO.trash}<span>Hapus Foto</span></button>
+      </div>`;
+  }else{
+    box.innerHTML=`
+      <div class="photo-actions">
+        <button type="button" class="s" id="btnCam">${ICO.camera}<span>Ambil Foto</span></button>
+        <button type="button" class="s" id="btnGal">${ICO.gallery}<span>Pilih Galeri</span></button>
+      </div>
+      <div class="photo-hint">Ambil gambar part langsung dari kamera atau pilih dari galeri perangkat.</div>`;
+  }
+  $('#btnCam').onclick=()=>$('#inpCam').click();
+  $('#btnGal').onclick=()=>$('#inpGal').click();
+  if($('#btnDelPhoto'))$('#btnDelPhoto').onclick=()=>{photoData='';renderPhotoWidget()};
+}
 
 function field([k,l,t,o],v){const id='f_'+k;v=v||'';
- if(t==='area')return `<label>${l}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
- if(t==='sel')return `<label>${l}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
- return `<label>${l}<input id=${id} type=${t||'text'} ${t==='number'?'inputmode=numeric':''} value="${esc(v)}"></label>`}
+  if(t==='area')return `<label>${l}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
+  if(t==='sel')return `<label>${l}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+  return `<label>${l}<input id=${id} type=${t||'text'} ${t==='number'?'inputmode=numeric':''} value="${esc(v)}"></label>`;
+}
 
 function inView(p){
- edit=p||null;const v=p||{status:'Unserviceable',qty:'1'};
- app.innerHTML=`<div class=card><h3>${p?'Edit part':'Input part baru'}</h3><label>Part Identification Code (barcode)<div class=row><input id=f_bc value="${esc(v.bc||'')}" ${p?'readonly':''}>${p?'':'<button class=s id=sc>📷 Scan</button>'}</div></label></div>`
- +S.map(([t,fs])=>`<div class=card><h4>${t}</h4>${fs.map(f=>field(f,v[f[0]])).join('')}</div>`).join('')
- +`<button class=p id=sv>Simpan</button>`;
- if(!p)$('#sc').onclick=()=>scan(c=>{$('#f_bc').value=c;const x=parts.find(r=>r.bc===c);if(x&&confirm('Barcode sudah terdaftar. Edit data part ini?'))go('in',x)});
- $('#sv').onclick=()=>run(async()=>{const q={bc:$('#f_bc').value.trim()};S.forEach(([,fs])=>fs.forEach(([k])=>q[k]=$('#f_'+k).value));
-  await api('save',{p:q,isNew:!edit});await load();toast('Data tersimpan');go('list')})}
+  edit=p||null;
+  const v=p||{status:'Unserviceable',qty:'1'};
+  photoData=v.photo||'';
+  app.innerHTML=`
+    <div class=card>
+      <h3>${p?'Edit part':'Input part baru'}</h3>
+      <label>Part Identification Code (barcode)
+        <div class=row>
+          <input id=f_bc value="${esc(v.bc||'')}" ${p?'readonly':''}>
+          ${p?'':`<button class=s id=sc type=button>${ICO.scan}<span>Scan</span></button>`}
+        </div>
+      </label>
+    </div>
+    <div class=card>
+      <h4>Foto Part</h4>
+      <input type="file" id="inpCam" accept="image/*" capture="environment" hidden>
+      <input type="file" id="inpGal" accept="image/*" hidden>
+      <div class="photo-box" id="photoWidget"></div>
+    </div>`
+    +S.map(([t,fs])=>`<div class=card><h4>${t}</h4>${fs.map(f=>field(f,v[f[0]])).join('')}</div>`).join('')
+    +`<button class=p id=sv>Simpan Data</button>`;
+
+  renderPhotoWidget();
+  const handleFile=async e=>{
+    const file=e.target.files && e.target.files[0];
+    if(!file)return;
+    try{
+      photoData=await compressImage(file);
+      renderPhotoWidget();
+      toast('Foto berhasil dimuat');
+    }catch(err){
+      toast(err.message);
+    }finally{
+      e.target.value='';
+    }
+  };
+  $('#inpCam').onchange=handleFile;
+  $('#inpGal').onchange=handleFile;
+
+  if(!p)$('#sc').onclick=()=>scan(c=>{
+    $('#f_bc').value=c;
+    const x=parts.find(r=>r.bc===c);
+    if(x&&confirm('Barcode sudah terdaftar. Edit data part ini?'))go('in',x);
+  });
+  $('#sv').onclick=()=>run(async()=>{
+    const q={bc:$('#f_bc').value.trim(),photo:photoData};
+    S.forEach(([,fs])=>fs.forEach(([k])=>q[k]=$('#f_'+k).value));
+    await api('save',{p:q,isNew:!edit});
+    await load();
+    toast('Data tersimpan');
+    go('list');
+  });
+}
 
 function listView(){
- app.innerHTML=`<div class=card><div class=row><input id=q placeholder="Cari barcode / PN / SN / lokasi" type=search><button class=s id=sc>📷 Scan</button></div>
- <div class=row><select id=fs><option value="">Semua status</option><option>Serviceable</option><option>Unserviceable</option></select><button class=s id=rf>Muat ulang</button></div><small id=cnt></small></div><div id=ls></div>`;
- const draw=()=>{const q=$('#q').value.toLowerCase(),f=$('#fs').value;
-  const r=parts.filter(p=>(!f||p.status===f)&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
-  $('#cnt').textContent=r.length+' part';
-  $('#ls').innerHTML=r.map(p=>`<div class="item ${p.status==='Serviceable'?'ok':''}" data-bc="${esc(p.bc)}"><div class=row><b>${esc(p.bc)}</b><span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span></div><div>${esc(p.desc)||'-'}</div><small>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</small></div>`).join('')||'<div class="card ctr">Belum ada data. Buka menu Input Data untuk menambah part.</div>'};
- draw();$('#q').oninput=draw;$('#fs').onchange=draw;
- $('#rf').onclick=()=>run(async()=>{await load();draw()});
- $('#ls').onclick=e=>{const i=e.target.closest('.item');if(i)detail(i.dataset.bc)};
- $('#sc').onclick=()=>scan(c=>{if(parts.some(p=>p.bc===c))detail(c);else if(confirm('Barcode '+c+' belum terdaftar. Input sekarang?')){go('in');$('#f_bc').value=c}else $('#q').value=c,draw()})}
+  app.innerHTML=`
+    <div class=card>
+      <div class=row>
+        <input id=q placeholder="Cari barcode / PN / SN / lokasi" type=search>
+        <button class=s id=sc type=button>${ICO.scan}<span>Scan</span></button>
+      </div>
+      <div class=row>
+        <select id=fs>
+          <option value="">Semua status</option>
+          <option>Serviceable</option>
+          <option>Unserviceable</option>
+        </select>
+        <button class=s id=rf type=button>${ICO.refresh}<span>Muat ulang</span></button>
+      </div>
+      <small id=cnt></small>
+    </div>
+    <div id=ls></div>`;
+  const draw=()=>{
+    const q=$('#q').value.toLowerCase(),f=$('#fs').value;
+    const r=parts.filter(p=>(!f||p.status===f)&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
+    $('#cnt').textContent=r.length+' part';
+    $('#ls').innerHTML=r.map(p=>`
+      <div class="item ${p.status==='Serviceable'?'ok':''}" data-bc="${esc(p.bc)}">
+        <div class=row>
+          <b>${esc(p.bc)}</b>
+          <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
+        </div>
+        <div>${esc(p.desc)||'-'}</div>
+        <small>
+          <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
+          ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
+        </small>
+      </div>`).join('')||'<div class="card ctr">Belum ada data. Buka menu Input Data untuk menambah part.</div>';
+  };
+  draw();$('#q').oninput=draw;$('#fs').onchange=draw;
+  $('#rf').onclick=()=>run(async()=>{await load();draw()});
+  $('#ls').onclick=e=>{const i=e.target.closest('.item');if(i)detail(i.dataset.bc)};
+  $('#sc').onclick=()=>scan(c=>{
+    if(parts.some(p=>p.bc===c))detail(c);
+    else if(confirm('Barcode '+c+' belum terdaftar. Input sekarang?')){go('in');$('#f_bc').value=c}
+    else{$('#q').value=c;draw()}
+  });
+}
 
 function detail(bc){run(async()=>{
- const {p,tl}=await api('get',{bc}),adm=me.r==='admin';
- modal(`<h3>${esc(p.bc)}</h3><span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
- <h4 style="margin-top:12px">Update lokasi / status</h4>
- <label>Lokasi saat ini<input id=ul value="${esc(p.loc)}"></label>
- <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
- <label>Catatan<input id=un></label><button class=p id=ub>Simpan update</button>
- <h4 style="margin-top:14px">Riwayat pergerakan</h4><div class=tl>${tl.map(t=>`<div><b>${esc(t.loc)||'-'}</b> (${t.st==='Serviceable'?'Serviceable':'Un-Serviceable'})<small>${esc(t.ts)} oleh ${esc(t.by)}${t.note?' | '+esc(t.note):''}</small></div>`).join('')||'<small>Belum ada riwayat</small>'}</div>
- <h4>Data part</h4>${S.map(([,fs])=>fs.filter(([k])=>p[k]&&k!=='status'&&k!=='loc')).filter(a=>a.length).map(fs=>`<dl>${fs.map(([k,l])=>`<dt>${l}</dt><dd>${esc(p[k])}</dd>`).join('')}</dl>`).join('')}
- <small>Dibuat ${esc(p.cby)} ${esc(p.cat)}; diubah ${esc(p.uby)} ${esc(p.uat)}</small>
- <div class=row style="margin-top:12px"><button class=s id=ed>✏️ Edit</button>${adm?'<button class=d id=dl>🗑 Hapus</button>':''}</div>`);
- $('#ub').onclick=()=>run(async()=>{await api('track',{bc,loc:$('#ul').value,st:$('#us').value,note:$('#un').value});await load();toast('Update tersimpan');closeM();detail(bc);if(view==='list')listView()});
- $('#ed').onclick=()=>{closeM();go('in',p)};
- if(adm)$('#dl').onclick=()=>{if(confirm('Hapus part '+bc+'?'))run(async()=>{await api('del',{bc});await load();closeM();toast('Part dihapus');go('list')})}})}
+  const {p,tl}=await api('get',{bc});
+  modal(`
+    <h3>${esc(p.bc)}</h3>
+    <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
+    ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${p.photo}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
+    <h4 style="margin-top:12px">Update lokasi / status</h4>
+    <label>Lokasi saat ini<input id=ul value="${esc(p.loc)}"></label>
+    <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
+    <label>Catatan<input id=un></label>
+    <button class=p id=ub>Simpan update</button>
+    <h4 style="margin-top:14px">Riwayat pergerakan</h4>
+    <div class=tl>${tl.map(t=>`<div><b>${esc(t.loc)||'-'}</b> (${t.st==='Serviceable'?'Serviceable':'Un-Serviceable'})<small>${esc(t.ts)} oleh ${esc(t.by)}${t.note?' | '+esc(t.note):''}</small></div>`).join('')||'<small>Belum ada riwayat</small>'}</div>
+    <h4>Data part</h4>
+    ${S.map(([,fs])=>fs.filter(([k])=>p[k]&&k!=='status'&&k!=='loc')).filter(a=>a.length).map(fs=>`<dl>${fs.map(([k,l])=>`<dt>${l}</dt><dd>${esc(p[k])}</dd>`).join('')}</dl>`).join('')}
+    <small>Dibuat ${esc(p.cby)} ${esc(p.cat)}; diubah ${esc(p.uby)} ${esc(p.uat)}</small>
+    <div class=row style="margin-top:12px">
+      <button class=s id=ed type=button>${ICO.edit}<span>Edit</span></button>
+      <button class=d id=dl type=button>${ICO.trash}<span>Hapus</span></button>
+    </div>`);
+  if($('#zoomPhoto'))$('#zoomPhoto').onclick=()=>window.open(p.photo,'_blank');
+  $('#ub').onclick=()=>run(async()=>{
+    await api('track',{bc,loc:$('#ul').value,st:$('#us').value,note:$('#un').value});
+    await load();toast('Update tersimpan');closeM();detail(bc);if(view==='list')listView();
+  });
+  $('#ed').onclick=()=>{closeM();go('in',p)};
+  $('#dl').onclick=()=>{
+    if(confirm('Hapus part '+bc+'? Aktivitas penghapusan akan dicatat pada log sistem.'))
+      run(async()=>{await api('del',{bc});await load();closeM();toast('Part dihapus');go('list')});
+  };
+})}
 
-function modal(h,c){closeM();onc=c;const d=document.createElement('div');d.id='md';d.innerHTML=`<div class=sheet><button class=x>✕</button>${h}</div>`;d.querySelector('.x').onclick=closeM;document.body.append(d)}
+function modal(h,c){
+  closeM();onc=c;
+  const d=document.createElement('div');
+  d.id='md';
+  d.innerHTML=`<div class=sheet><button class=x type=button aria-label="Tutup">${ICO.close}</button>${h}</div>`;
+  d.querySelector('.x').onclick=closeM;
+  document.body.append(d);
+}
 function closeM(){const d=$('#md');if(d)d.remove();if(onc){const f=onc;onc=null;f()}}
+
 function scan(cb){
- modal('<h3>Scan barcode</h3><div id=rd></div><p><small>Arahkan kamera ke barcode. Atau ketik kodenya:</small></p><div class=row><input id=man placeholder="Kode barcode"><button class=s id=ok>OK</button></div>',()=>{const s=sc;sc=null;if(s)s.stop().then(()=>s.clear()).catch(()=>{})});
- let done=0;const fin=t=>{if(done||!t)return;done=1;closeM();cb(String(t).trim())};
- $('#ok').onclick=()=>fin($('#man').value);
- const H=Html5QrcodeSupportedFormats;
- sc=new Html5Qrcode('rd',{formatsToSupport:[H.CODE_128,H.CODE_39,H.CODE_93,H.QR_CODE,H.EAN_13,H.EAN_8,H.ITF,H.UPC_A,H.DATA_MATRIX],experimentalFeatures:{useBarCodeDetectorIfSupported:true},verbose:false});
- sc.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>({width:Math.floor(Math.min(w*.9,320)),height:Math.floor(Math.min(h*.6,130))})},fin,()=>{})
-  .catch(()=>{$('#rd').innerHTML='<p style="color:#fff;padding:14px">Kamera tidak bisa dibuka. Izinkan akses kamera di browser, dan pastikan halaman dibuka lewat HTTPS. Anda tetap bisa mengetik kode manual.</p>'})}
+  modal('<h3>Scan barcode</h3><div id=rd></div><p><small>Arahkan kamera ke barcode. Atau ketik kodenya:</small></p><div class=row><input id=man placeholder="Kode barcode"><button class=s id=ok type=button>OK</button></div>',()=>{const s=sc;sc=null;if(s)s.stop().then(()=>s.clear()).catch(()=>{})});
+  let done=0;const fin=t=>{if(done||!t)return;done=1;closeM();cb(String(t).trim())};
+  $('#ok').onclick=()=>fin($('#man').value);
+  const H=Html5QrcodeSupportedFormats;
+  sc=new Html5Qrcode('rd',{formatsToSupport:[H.CODE_128,H.CODE_39,H.CODE_93,H.QR_CODE,H.EAN_13,H.EAN_8,H.ITF,H.UPC_A,H.DATA_MATRIX],experimentalFeatures:{useBarCodeDetectorIfSupported:true},verbose:false});
+  sc.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>({width:Math.floor(Math.min(w*.9,320)),height:Math.floor(Math.min(h*.6,130))})},fin,()=>{})
+    .catch(()=>{$('#rd').innerHTML='<p style="color:#fff;padding:14px">Kamera tidak bisa dibuka. Izinkan akses kamera di browser, dan pastikan halaman dibuka lewat HTTPS. Anda tetap bisa mengetik kode manual.</p>'});
+}
 
 async function admView(){
- app.innerHTML='<div class=card id=ul>Memuat pengguna...</div>';
- await run(async()=>{const us=await api('users'),L={active:'Aktif',pending:'Menunggu',off:'Nonaktif'};
-  $('#ul').innerHTML='<h3>Kelola pengguna</h3>'+us.map(u=>`<div class=u><div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${u.r==='admin'?'Admin':'User'} | ${L[u.st]||u.st}</small></div><div class=a>
-  ${u.st==='pending'?`<button data-op=approve data-nip="${esc(u.nip)}">Setujui</button>`:''}
-  <button data-op=reset data-nip="${esc(u.nip)}">Reset password</button>
-  ${u.nip!==me.nip?`<button data-op=${u.st==='off'?'on':'off'} data-nip="${esc(u.nip)}">${u.st==='off'?'Aktifkan':'Nonaktifkan'}</button><button class=d data-op=del data-nip="${esc(u.nip)}">Hapus</button>`:''}</div></div>`).join('');
-  $('#ul').onclick=e=>{const b=e.target.closest('button');if(!b)return;const {op,nip}=b.dataset;let pw;
-   if(op==='reset'){pw=prompt('Password sementara untuk '+nip+' (min. 8, huruf + karakter spesial):');if(!pw)return}
-   if(op==='del'&&!confirm('Hapus pengguna '+nip+'?'))return;
-   run(async()=>{await api('uact',{nip,op:op==='approve'?'on':op,pw});toast('Berhasil');admView()})}})}
+  app.innerHTML=`
+    <div class=card id=ul>Memuat pengguna...</div>
+    <div class=card id=dlog>Memuat log penghapusan...</div>`;
+  await run(async()=>{
+    const [us,logs]=await Promise.all([api('users'),api('del_logs')]);
+    const L={active:'Aktif',pending:'Menunggu',off:'Nonaktif'};
+    $('#ul').innerHTML='<h3>Kelola pengguna</h3>'+us.map(u=>`
+      <div class=u>
+        <div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${u.r==='admin'?'Admin':'User'} | ${L[u.st]||u.st}</small></div>
+        <div class=a>
+          ${u.st==='pending'?`<button data-op=approve data-nip="${esc(u.nip)}">Setujui</button>`:''}
+          <button data-op=reset data-nip="${esc(u.nip)}">Reset password</button>
+          ${u.nip!==me.nip?`<button data-op=${u.st==='off'?'on':'off'} data-nip="${esc(u.nip)}">${u.st==='off'?'Aktifkan':'Nonaktifkan'}</button><button class=d data-op=del data-nip="${esc(u.nip)}">Hapus</button>`:''}
+        </div>
+      </div>`).join('');
+
+    $('#dlog').innerHTML='<h3>Log Penghapusan Data (Audit Trail)</h3>'+(
+      logs.length
+        ? logs.map(l=>`
+            <div class="log-item">
+              <div class="top">
+                <b>${esc(l.bc)}</b>
+                <span class="badge del">DELETED</span>
+              </div>
+              <small><b>Dihapus oleh:</b> ${esc(l.by)} pada ${esc(l.ts)}</small>
+              <small><b>Lokasi terakhir:</b> ${esc(l.loc)||'-'}</small>
+              <small>${esc(l.note)}</small>
+            </div>`).join('')
+        : '<small>Belum ada riwayat penghapusan data.</small>'
+    );
+
+    $('#ul').onclick=e=>{
+      const b=e.target.closest('button');if(!b)return;
+      const {op,nip}=b.dataset;let pw;
+      if(op==='reset'){pw=prompt('Password sementara untuk '+nip+' (min. 8, huruf + karakter spesial):');if(!pw)return}
+      if(op==='del'&&!confirm('Hapus pengguna '+nip+'?'))return;
+      run(async()=>{await api('uact',{nip,op:op==='approve'?'on':op,pw});toast('Berhasil');admView()});
+    };
+  });
+}
 
 if(me&&tok){hdr();nav();run(load).then(()=>go('list'))}else authView();
 </script></body></html>
