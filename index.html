@@ -978,17 +978,17 @@ function listView(){
         </select>
         <button class=s id=rf type=button>${ICO.refresh}<span>Muat ulang</span></button>
       </div>
-      <div class="list-meta" style="flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px">
-          <small id=cnt></small>
+      <div class="list-meta" style="gap:6px">
+        <small id=cnt style="white-space:nowrap"></small>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
           <div class="view-toggle" role="group" aria-label="Mode Tampilan">
-            <button type="button" id="modeCards" class="${listMode==='cards'?'active':''}">${ICO.grid}<span>Cards</span></button>
-            <button type="button" id="modeTable" class="${listMode==='table'?'active':''}">${ICO.table}<span>Tabel</span></button>
+            <button type="button" id="modeCards" class="${listMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
+            <button type="button" id="modeTable" class="${listMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
           </div>
+          <button type="button" class="ex" id="btnExport" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
+            ${ICO.download}<span>Export</span>
+          </button>
         </div>
-        <button type="button" class="ex" id="btnExport" style="padding:7px 12px;font-size:12.5px">
-          ${ICO.download}<span>Export Excel / PDF</span>
-        </button>
       </div>
     </div>
     <div id=ls></div>`;
