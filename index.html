@@ -969,9 +969,10 @@ function listView(){
     </div>
     <div id=ls></div>`;
 
+  const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
   const draw=()=>{
     const q=$('#q').value.toLowerCase(),f=$('#fs').value;
-    const r=parts.filter(p=>(!f||p.status===f)&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
+    const r=parts.filter(p=>(!f||isOk(p.status)===isOk(f))&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
     $('#cnt').textContent=r.length+' part';
 
     if(!r.length){
@@ -1003,17 +1004,17 @@ function listView(){
                   <td>${esc(p.pn)||'-'}</td>
                   <td>${esc(p.sn)||'-'}</td>
                   <td>${esc(p.loc)||'-'}</td>
-                  <td><span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span></td>
+                  <td><span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span></td>
                 </tr>`).join('')}
             </tbody>
           </table>
         </div>`;
     }else{
       $('#ls').innerHTML=r.map(p=>`
-        <div class="item ${p.status==='Serviceable'?'ok':''}" data-bc="${esc(p.bc)}">
+        <div class="item ${isOk(p.status)?'ok':''}" data-bc="${esc(p.bc)}">
           <div class=row>
             <b>${esc(p.bc)}</b>
-            <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
+            <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
           </div>
           <div>${esc(p.desc)||'-'}</div>
           <small>
