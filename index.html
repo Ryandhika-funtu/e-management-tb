@@ -446,28 +446,37 @@ nav button.on::before{
 
 /* Modal & Bottom Sheet */
 #md{
-  position:fixed;inset:0;
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  width:100%;height:100vh;height:100dvh;
   background:rgba(15,23,42,.55);
   backdrop-filter:blur(3px);
   -webkit-backdrop-filter:blur(3px);
-  z-index:30;display:flex;align-items:flex-end;justify-content:center;
+  z-index:50;display:flex;align-items:flex-end;justify-content:center;
+  padding-top:calc(12px + env(safe-area-inset-top));
+  overflow:hidden;
   animation:fadeIn .18s ease;
 }
 @media(min-width:640px){
   #md{align-items:center;padding:16px}
-  .sheet{border-radius:16px !important;max-height:88vh !important}
+  .sheet{border-radius:16px !important;max-height:86vh !important;max-height:86dvh !important}
 }
 .sheet{
-  background:var(--surface);width:100%;max-width:640px;max-height:92vh;
-  overflow-y:auto;overflow-x:hidden;border-radius:18px 18px 0 0;
-  padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+  background:var(--surface);width:100%;max-width:640px;
+  max-height:calc(100vh - 24px - env(safe-area-inset-top));
+  max-height:calc(100dvh - 24px - env(safe-area-inset-top));
+  overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  border-radius:18px 18px 0 0;
+  padding:14px 18px calc(24px + env(safe-area-inset-bottom));
   position:relative;box-shadow:var(--shadow-lg);
   animation:slideUp .22s cubic-bezier(.16,1,.3,1);
 }
 .sheet .x{
-  position:absolute;right:14px;top:14px;
-  width:32px;height:32px;padding:0;border-radius:50%;
-  background:#f1f5f9;color:var(--muted);
+  position:sticky;top:0;float:right;margin:-4px -6px 4px 10px;
+  z-index:5;
+  width:34px;height:34px;padding:0;border-radius:50%;
+  background:#f1f5f9;color:var(--navy);
+  border:1px solid var(--border-strong);
+  box-shadow:0 2px 6px rgba(15,23,42,.1);
 }
 .sheet .x:hover{background:#e2e8f0;color:var(--text)}
 
@@ -1079,13 +1088,20 @@ function detail(bc){run(async()=>{
 
 function modal(h,c){
   closeM();onc=c;
+  document.body.style.overflow='hidden';
   const d=document.createElement('div');
   d.id='md';
   d.innerHTML=`<div class=sheet><button class=x type=button aria-label="Tutup">${ICO.close}</button>${h}</div>`;
   d.querySelector('.x').onclick=closeM;
+  d.onclick=e=>{if(e.target===d)closeM()};
   document.body.append(d);
+  requestAnimationFrame(()=>{const s=d.querySelector('.sheet');if(s)s.scrollTop=0});
 }
-function closeM(){const d=$('#md');if(d)d.remove();if(onc){const f=onc;onc=null;f()}}
+function closeM(){
+  document.body.style.overflow='';
+  const d=$('#md');if(d)d.remove();
+  if(onc){const f=onc;onc=null;f()}
+}
 
 function scan(cb){
   modal('<h3>Scan barcode</h3><div id=rd></div><p><small>Arahkan kamera ke barcode. Atau ketik kodenya:</small></p><div class=row><input id=man placeholder="Kode barcode"><button class=s id=ok type=button>OK</button></div>',()=>{const s=sc;sc=null;if(s)s.stop().then(()=>s.clear()).catch(()=>{})});
