@@ -541,6 +541,27 @@ nav button.on::before{
 }
 .sheet .x:hover{background:#e2e8f0;color:var(--text)}
 
+/* Sub-Modal Pop-up (Tambah Lokasi Baru) */
+#subMd{
+  position:fixed;inset:0;
+  background:rgba(15,23,42,.58);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+  z-index:55;
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;
+  animation:fadeIn .15s ease;
+}
+.sub-box{
+  background:var(--surface);
+  width:100%;max-width:400px;
+  border-radius:14px;
+  padding:18px;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-lg);
+  animation:slideUp .18s cubic-bezier(.16,1,.3,1);
+}
+
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(20px);opacity:.6}to{transform:translateY(0);opacity:1}}
 
@@ -757,9 +778,42 @@ function hdr(){
   $('#lo').onclick=()=>{menu.classList.remove('open');logout()};
   $('#cp').onclick=()=>{
     menu.classList.remove('open');
-    const o=prompt('Password lama:');if(!o)return;
-    const n=prompt('Password baru (min. 8, huruf + karakter spesial):');
-    if(n)run(async()=>{await api('chpw',{old:o,pw:n});toast('Password berhasil diubah')});
+    modal(`
+      <h3>Change Password</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:-4px">
+        Password baru minimal 8 karakter, mengandung huruf (a-z) dan karakter spesial.
+      </p>
+      <label>Password Lama <span style="color:var(--red)">*</span>
+        <input id="cpOld" type="password" autocomplete="current-password">
+      </label>
+      <label>Password Baru <span style="color:var(--red)">*</span>
+        <input id="cpNew" type="password" autocomplete="new-password">
+      </label>
+      <label>Konfirmasi Password Baru <span style="color:var(--red)">*</span>
+        <input id="cpConf" type="password" autocomplete="new-password">
+      </label>
+      <div class="row" style="margin-top:14px;margin-bottom:0">
+        <button type="button" class="s" id="cpCancel" style="flex:1">Batal</button>
+        <button type="button" class="p" id="cpSave" style="flex:1;padding:10px 14px">Simpan Password</button>
+      </div>
+    `);
+    $('#cpCancel').onclick=closeM;
+    const submitChpw=()=>run(async()=>{
+      const o=$('#cpOld').value;
+      const n=$('#cpNew').value;
+      const c=$('#cpConf').value;
+      if(!o)throw new Error('Password lama wajib diisi');
+      if(!/^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{8,64}$/.test(n)){
+        throw new Error('Password baru minimal 8 karakter, berisi huruf dan karakter spesial');
+      }
+      if(n!==c)throw new Error('Konfirmasi password baru tidak cocok');
+      await api('chpw',{old:o,pw:n});
+      closeM();
+      toast('Password berhasil diubah');
+    });
+    $('#cpSave').onclick=submitChpw;
+    $('#cpConf').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitChpw()}};
+    requestAnimationFrame(()=>$('#cpOld').focus());
   };
 }
 document.addEventListener('click',e=>{
@@ -875,11 +929,43 @@ function buildLocationOptions(selectedVal){
 }
 
 function promptAddLocation(selectEl){
-  const raw=prompt('Masukkan nama Current Location baru:');
-  if(!raw)return;
-  const cleanLoc=raw.trim().toUpperCase();
-  if(!cleanLoc)return;
-  run(async()=>{
+  const oldSub=$('#subMd');
+  if(oldSub)oldSub.remove();
+
+  const overlay=document.createElement('div');
+  overlay.id='subMd';
+  overlay.innerHTML=`
+    <div class="sub-box" role="dialog" aria-modal="true">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h3 style="margin:0;font-size:15.5px">Tambah Current Location</h3>
+        <button type="button" class="s" id="subClose" aria-label="Tutup" style="width:30px;height:30px;padding:0;border-radius:50%">${ICO.close}</button>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px">
+        Lokasi baru akan otomatis tersimpan ke database dan langsung terpilih pada daftar.
+      </p>
+      <label>Nama Lokasi Baru <span style="color:var(--red)">*</span>
+        <input id="subLocInp" type="text" placeholder="Contoh: HANGAR 4 / HOLDING TB / RACK A1" autocomplete="off">
+      </label>
+      <div class="row" style="margin-top:14px;margin-bottom:0">
+        <button type="button" class="s" id="subCancel" style="flex:1">Batal</button>
+        <button type="button" class="p" id="subSave" style="flex:1;padding:10px 14px">Simpan Lokasi</button>
+      </div>
+    </div>`;
+
+  const closeSub=()=>overlay.remove();
+  overlay.onclick=e=>{if(e.target===overlay)closeSub()};
+  document.body.append(overlay);
+
+  const inp=$('#subLocInp');
+  $('#subClose').onclick=closeSub;
+  $('#subCancel').onclick=closeSub;
+
+  const submitLoc=()=>run(async()=>{
+    const cleanLoc=inp.value.trim().toUpperCase();
+    if(!cleanLoc){
+      inp.focus();
+      throw new Error('Nama lokasi baru wajib diisi');
+    }
     const updatedLocs=await api('add_loc',{loc:cleanLoc});
     if(Array.isArray(updatedLocs))locations=updatedLocs;
     else if(!locations.includes(cleanLoc))locations.push(cleanLoc);
@@ -887,8 +973,13 @@ function promptAddLocation(selectEl){
       selectEl.innerHTML=buildLocationOptions(cleanLoc);
       selectEl.value=cleanLoc;
     }
+    closeSub();
     toast('Lokasi "'+cleanLoc+'" ditambahkan ke database');
   });
+
+  $('#subSave').onclick=submitLoc;
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitLoc()}};
+  requestAnimationFrame(()=>inp.focus());
 }
 
 function field([k,l,t,o],v,req){
@@ -1427,10 +1518,44 @@ async function admView(){
 
     $('#ul').onclick=e=>{
       const b=e.target.closest('button');if(!b)return;
-      const {op,nip}=b.dataset;let pw;
-      if(op==='reset'){pw=prompt('Password sementara untuk '+nip+' (min. 8, huruf + karakter spesial):');if(!pw)return}
+      const {op,nip}=b.dataset;
+      if(op==='reset'){
+        modal(`
+          <h3>Reset Password Pengguna</h3>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:-4px">
+            Buat password sementara untuk NIP <b>${esc(nip)}</b> (min. 8 karakter, huruf + karakter spesial).
+          </p>
+          <label>Password Sementara <span style="color:var(--red)">*</span>
+            <input id="rstPw" type="password" autocomplete="new-password">
+          </label>
+          <label>Konfirmasi Password Sementara <span style="color:var(--red)">*</span>
+            <input id="rstConf" type="password" autocomplete="new-password">
+          </label>
+          <div class="row" style="margin-top:14px;margin-bottom:0">
+            <button type="button" class="s" id="rstCancel" style="flex:1">Batal</button>
+            <button type="button" class="p" id="rstSave" style="flex:1;padding:10px 14px">Reset Password</button>
+          </div>
+        `);
+        $('#rstCancel').onclick=closeM;
+        const submitReset=()=>run(async()=>{
+          const pw=$('#rstPw').value;
+          const cf=$('#rstConf').value;
+          if(!/^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{8,64}$/.test(pw)){
+            throw new Error('Password minimal 8 karakter, berisi huruf dan karakter spesial');
+          }
+          if(pw!==cf)throw new Error('Konfirmasi password sementara tidak cocok');
+          await api('uact',{nip,op:'reset',pw});
+          closeM();
+          toast('Password untuk '+nip+' berhasil direset');
+          admView();
+        });
+        $('#rstSave').onclick=submitReset;
+        $('#rstConf').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitReset()}};
+        requestAnimationFrame(()=>$('#rstPw').focus());
+        return;
+      }
       if(op==='del'&&!confirm('Hapus pengguna '+nip+'?'))return;
-      run(async()=>{await api('uact',{nip,op:op==='approve'?'on':op,pw});toast('Berhasil');admView()});
+      run(async()=>{await api('uact',{nip,op:op==='approve'?'on':op});toast('Berhasil');admView()});
     };
   });
 }
