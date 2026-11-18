@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#002240">
 <title>e-Management Holding TB</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,12 +34,17 @@
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none !important}
+html,body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+}
 body{
   margin:0;
   font:14px/1.5 'Inter',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   background:var(--bg);
   color:var(--text);
-  padding-bottom:calc(82px + env(safe-area-inset-bottom));
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
   -webkit-font-smoothing:antialiased;
 }
 
@@ -90,6 +95,7 @@ body{
 
 /* Header */
 header{
+  width:100%;
   background:rgba(255,255,255,.95);
   backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
@@ -154,10 +160,18 @@ header .tt small{
 .acc-sep{height:1px;background:var(--border);margin:4px 0}
 
 /* Main Container */
-main{max-width:680px;margin:0 auto;padding:14px 16px}
+main{
+  width:100%;
+  max-width:680px;
+  margin:0 auto;
+  padding:14px 16px;
+}
 
 /* Cards */
 .card{
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
   background:var(--surface);
   border:1px solid var(--border);
   border-radius:var(--radius);
@@ -174,20 +188,40 @@ h4{
   font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
   color:var(--blue);border-left:3px solid var(--accent);
   padding:2px 0 2px 10px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.req-badge{
+  font-size:10.5px;font-weight:700;text-transform:none;letter-spacing:0;
+  background:var(--red-soft);color:var(--red-text);
+  padding:2px 8px;border-radius:999px;
 }
 
-/* Forms */
+/* Forms & Date Field Fix */
 label{
-  display:block;font-size:12.5px;font-weight:600;
+  display:block;
+  width:100%;
+  max-width:100%;
+  font-size:12.5px;font-weight:600;
   color:#334155;margin-bottom:12px;
 }
 label:last-child{margin-bottom:0}
 input,select,textarea{
-  display:block;width:100%;margin-top:5px;
-  padding:10px 12px;font:inherit;font-size:14px;
+  display:block;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  margin-top:5px;
+  padding:10px 12px;
+  font:inherit;font-size:14px;
   color:var(--text);background:#fff;
   border:1px solid var(--border-strong);border-radius:9px;
   transition:border-color .15s,box-shadow .15s,background-color .15s;
+}
+input[type="date"]{
+  -webkit-appearance:none;
+  appearance:none;
+  min-height:42px;
+  line-height:1.2;
 }
 input::placeholder,textarea::placeholder{color:#94a3b8}
 input:hover,select:hover,textarea:hover{border-color:#94a3b8}
@@ -224,6 +258,8 @@ button.s{
 button.s:hover{background:#f1f5f9;border-color:#94a3b8}
 button.d{background:var(--red-soft);color:var(--red-text)}
 button.d:hover{background:#fecaca}
+button.ex{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+button.ex:hover{background:#d1fae5}
 
 /* Photo Capture & Preview Box */
 .photo-box{
@@ -232,6 +268,10 @@ button.d:hover{background:#fecaca}
   border-radius:10px;
   padding:14px;
   text-align:center;
+}
+.photo-box.missing{
+  border-color:#fca5a5;
+  background:#fffafb;
 }
 .photo-actions{
   display:grid;
@@ -260,18 +300,25 @@ button.d:hover{background:#fecaca}
 }
 
 /* Row Utility */
-.row{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
+.row{display:flex;gap:8px;align-items:stretch;margin-bottom:10px;width:100%}
 .row:last-child{margin-bottom:0}
 .row>input,.row>select{margin-top:0;flex:1;min-width:0}
 
-/* Count Indicator */
+/* Toolbar Bar in List */
+.list-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:6px;
+}
 #cnt{
-  display:inline-block;margin-top:4px;
   font-size:12px;font-weight:600;color:var(--muted);
 }
 
 /* Part List Items */
 .item{
+  width:100%;
   background:var(--surface);
   border:1px solid var(--border);
   border-left:4px solid var(--accent);
@@ -290,9 +337,11 @@ button.d:hover{background:#fecaca}
 .item b{
   color:var(--navy);font-size:14.5px;font-weight:700;
   font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .item>div:nth-child(2){
   font-size:13.5px;font-weight:500;color:#1e293b;margin-bottom:6px;
+  word-break:break-word;
 }
 .item small{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -307,7 +356,7 @@ button.d:hover{background:#fecaca}
 .badge{
   display:inline-flex;align-items:center;gap:5px;
   font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;
-  background:var(--red-soft);color:var(--red-text);white-space:nowrap;
+  background:var(--red-soft);color:var(--red-text);white-space:nowrap;flex-shrink:0;
 }
 .badge::before{
   content:"";width:6px;height:6px;border-radius:50%;background:currentColor;
@@ -318,6 +367,7 @@ button.d:hover{background:#fecaca}
 /* Bottom Navigation */
 nav{
   position:fixed;bottom:0;left:0;right:0;
+  width:100%;
   background:rgba(255,255,255,.96);
   backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
@@ -355,7 +405,7 @@ nav button.on::before{
 }
 .sheet{
   background:var(--surface);width:100%;max-width:640px;max-height:92vh;
-  overflow-y:auto;border-radius:18px 18px 0 0;
+  overflow-y:auto;overflow-x:hidden;border-radius:18px 18px 0 0;
   padding:20px 18px calc(20px + env(safe-area-inset-bottom));
   position:relative;box-shadow:var(--shadow-lg);
   animation:slideUp .22s cubic-bezier(.16,1,.3,1);
@@ -417,6 +467,14 @@ dd{margin:0;color:var(--text);font-weight:600;word-break:break-word}
   box-shadow:0 0 0 2px var(--accent);
 }
 .tl small{color:var(--muted);display:block;margin-top:3px;font-size:12px}
+
+/* Export Format Selector Grid */
+.fmt-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:6px;
+}
 
 /* Links & Helpers */
 .ctr{text-align:center}
@@ -495,7 +553,10 @@ const ICO = {
   edit: `<svg class="ico" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
   trash: `<svg class="ico" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
   close: `<svg class="ico" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-  imageSm: `<svg class="ico" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+  imageSm: `<svg class="ico" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+  download: `<svg class="ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+  fileSheet: `<svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
+  filePdf: `<svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-2h1.5a1 1 0 0 1 0 2H9z"/></svg>`
 };
 
 const S=[
@@ -504,17 +565,16 @@ const S=[
 ['Kondisi',[['disc','Discrepancy / Condition (8)','area']]],
 ['Pekerjaan (9)',[['wno','Order/Jobcard/MDR/PD Sheet No (9.a)'],['wtype','Jenis (9.b)','sel',WT],['wdet','Keterangan (9.b)']]],
 ['Pengesahan',[['rby','Removed/Inspected by (10)'],['rdate','Date (11)','date'],['dby','Declared Serviceable by (12)'],['ddate','Date (13)','date']]],
-['Status & Lokasi',[['status','Serviceable / Un-Serviceable (14)','sel',['Unserviceable','Serviceable']],['loc','Current Location']]],
+['Status & Lokasi',[['status','Serviceable / Un-Serviceable (14)','sel',['Unserviceable','Serviceable']],['loc','Current Location','loc_sel']]],
 ['Sisi Belakang (15), jika perlu',[['pos','Pos'],['ref','Reference'],['tsn','TSN/CSN'],['tso','TSO/CSO'],['tbo','TBO'],['bdisc','Discrepancy','area']]]];
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=[],view='list',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=[],locations=[],view='list',edit=null,sc=null,onc=null,photoData='';
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
 
 async function api(a,d){
-  // Gunakan google.script.run jika berjalan langsung di Apps Script Web App, atau fallback ke fetch API
   if(window.google && google.script && google.script.run){
     return new Promise((res,rej)=>{
       google.script.run
@@ -533,7 +593,15 @@ async function api(a,d){
 }
 
 async function run(fn){$('#bz').classList.add('on');try{return await fn()}catch(e){toast(e.message)}finally{$('#bz').classList.remove('on')}}
-const load=async()=>{parts=await api('list')};
+const load=async()=>{
+  const res=await api('list');
+  if(Array.isArray(res)){
+    parts=res;
+  }else{
+    parts=res.parts||[];
+    locations=res.locations||[];
+  }
+};
 
 function logout(q){tok=null;me=null;localStorage.removeItem('tok');localStorage.removeItem('me');hdr();nav();authView();if(q)toast('Sesi habis, silakan login ulang')}
 
@@ -576,7 +644,12 @@ function nav(){
   ].map(([k,i,l])=>`<button class="${view===k?'on':''}" data-v=${k}>${i}<span>${l}</span></button>`).join(''):'';
 }
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
-function go(v,p){view=v;nav();({in:()=>inView(p),list:listView,adm:admView})[v]();scrollTo(0,0)}
+function go(v,p){
+  view=v;
+  nav();
+  ({in:()=>inView(p),list:listView,adm:admView})[v]();
+  requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
+}
 
 function authView(reg){
   app.innerHTML=`<div class=card style="margin-top:24px"><h2>${reg?'Daftar akun':'Masuk'}</h2>
@@ -599,44 +672,28 @@ function authView(reg){
   });
 }
 
-// Kompresi gambar di browser agar ringan disimpan di Google Sheets (< 45 KB)
-function compressImage(file){
+// Baca file gambar asli tanpa kompresi/ekstraksi untuk diunggah langsung ke Google Drive
+function readOriginalImage(file){
   return new Promise((resolve,reject)=>{
+    if(!file || !file.type.startsWith('image/')){
+      reject(new Error('File yang dipilih harus berupa gambar'));
+      return;
+    }
     const reader=new FileReader();
-    reader.onload=e=>{
-      const img=new Image();
-      img.onload=()=>{
-        const canvas=document.createElement('canvas');
-        const maxDim=720;
-        let w=img.width,h=img.height;
-        if(w>maxDim || h>maxDim){
-          if(w>h){h=Math.round(h*maxDim/w);w=maxDim}
-          else{w=Math.round(w*maxDim/h);h=maxDim}
-        }
-        canvas.width=w;canvas.height=h;
-        const ctx=canvas.getContext('2d');
-        ctx.drawImage(img,0,0,w,h);
-        let dataUrl=canvas.toDataURL('image/jpeg',0.68);
-        if(dataUrl.length>45000){
-          dataUrl=canvas.toDataURL('image/jpeg',0.48);
-        }
-        resolve(dataUrl);
-      };
-      img.onerror=()=>reject(new Error('File gambar tidak dapat dibaca'));
-      img.src=e.target.result;
-    };
+    reader.onload=e=>resolve(e.target.result);
     reader.onerror=()=>reject(new Error('Gagal membaca file gambar'));
     reader.readAsDataURL(file);
   });
 }
 
-function renderPhotoWidget(){
+function renderPhotoWidget(highlightMissing){
   const box=$('#photoWidget');
   if(!box)return;
+  box.classList.toggle('missing', Boolean(highlightMissing && !photoData));
   if(photoData){
     box.innerHTML=`
       <div class="photo-preview">
-        <img src="${photoData}" alt="Preview Foto Part">
+        <img src="${esc(photoData)}" alt="Preview Foto Part">
       </div>
       <div class="photo-actions">
         <button type="button" class="s" id="btnCam">${ICO.camera}<span>Foto Ulang</span></button>
@@ -651,16 +708,30 @@ function renderPhotoWidget(){
         <button type="button" class="s" id="btnCam">${ICO.camera}<span>Ambil Foto</span></button>
         <button type="button" class="s" id="btnGal">${ICO.gallery}<span>Pilih Galeri</span></button>
       </div>
-      <div class="photo-hint">Ambil gambar part langsung dari kamera atau pilih dari galeri perangkat.</div>`;
+      <div class="photo-hint">Wajib mengambil foto part langsung dari kamera atau memilih dari galeri (kualitas asli).</div>`;
   }
   $('#btnCam').onclick=()=>$('#inpCam').click();
   $('#btnGal').onclick=()=>$('#inpGal').click();
-  if($('#btnDelPhoto'))$('#btnDelPhoto').onclick=()=>{photoData='';renderPhotoWidget()};
+  if($('#btnDelPhoto'))$('#btnDelPhoto').onclick=()=>{photoData='';renderPhotoWidget(true)};
 }
 
-function field([k,l,t,o],v){const id='f_'+k;v=v||'';
+function buildLocationOptions(selectedVal){
+  const list=[...locations];
+  if(selectedVal && !list.includes(selectedVal)){
+    list.unshift(selectedVal);
+  }
+  if(list.length===0){
+    return `<option value="">-- Belum ada lokasi di sheet Current Location --</option>`;
+  }
+  return `<option value="">-- Pilih Lokasi --</option>`+
+    list.map(x=>`<option value="${esc(x)}" ${x===selectedVal?'selected':''}>${esc(x)}</option>`).join('');
+}
+
+function field([k,l,t,o],v){
+  const id='f_'+k;v=v||'';
   if(t==='area')return `<label>${l}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
   if(t==='sel')return `<label>${l}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+  if(t==='loc_sel')return `<label>${l}<select id=${id}>${buildLocationOptions(v)}</select></label>`;
   return `<label>${l}<input id=${id} type=${t||'text'} ${t==='number'?'inputmode=numeric':''} value="${esc(v)}"></label>`;
 }
 
@@ -679,7 +750,7 @@ function inView(p){
       </label>
     </div>
     <div class=card>
-      <h4>Foto Part</h4>
+      <h4><span>Foto Part</span><span class="req-badge">Wajib diisi</span></h4>
       <input type="file" id="inpCam" accept="image/*" capture="environment" hidden>
       <input type="file" id="inpGal" accept="image/*" hidden>
       <div class="photo-box" id="photoWidget"></div>
@@ -687,14 +758,24 @@ function inView(p){
     +S.map(([t,fs])=>`<div class=card><h4>${t}</h4>${fs.map(f=>field(f,v[f[0]])).join('')}</div>`).join('')
     +`<button class=p id=sv>Simpan Data</button>`;
 
-  renderPhotoWidget();
+  renderPhotoWidget(false);
+
+  // Sinkronisasi daftar lokasi terbaru dari sheet Current Location saat membuka form input
+  api('locations').then(locs=>{
+    if(Array.isArray(locs)){
+      locations=locs;
+      const sel=$('#f_loc');
+      if(sel)sel.innerHTML=buildLocationOptions(v.loc||'');
+    }
+  }).catch(()=>{});
+
   const handleFile=async e=>{
     const file=e.target.files && e.target.files[0];
     if(!file)return;
     try{
-      photoData=await compressImage(file);
-      renderPhotoWidget();
-      toast('Foto berhasil dimuat');
+      photoData=await readOriginalImage(file);
+      renderPhotoWidget(false);
+      toast('Foto asli siap disimpan');
     }catch(err){
       toast(err.message);
     }finally{
@@ -709,14 +790,76 @@ function inView(p){
     const x=parts.find(r=>r.bc===c);
     if(x&&confirm('Barcode sudah terdaftar. Edit data part ini?'))go('in',x);
   });
+
   $('#sv').onclick=()=>run(async()=>{
-    const q={bc:$('#f_bc').value.trim(),photo:photoData};
+    const bc=$('#f_bc').value.trim();
+    if(!bc)throw new Error('Barcode wajib diisi');
+    if(!photoData){
+      renderPhotoWidget(true);
+      $('#photoWidget').scrollIntoView({behavior:'smooth',block:'center'});
+      throw new Error('Foto part wajib diambil terlebih dahulu');
+    }
+    const locVal=$('#f_loc').value.trim();
+    if(!locVal){
+      $('#f_loc').focus();
+      throw new Error('Current Location wajib dipilih');
+    }
+    const q={bc,photo:photoData};
     S.forEach(([,fs])=>fs.forEach(([k])=>q[k]=$('#f_'+k).value));
     await api('save',{p:q,isNew:!edit});
     await load();
-    toast('Data tersimpan');
+    toast('Data & foto berhasil disimpan');
     go('list');
   });
+}
+
+function downloadBase64File(base64,fileName,mimeType){
+  const bin=atob(base64);
+  const len=bin.length;
+  const bytes=new Uint8Array(len);
+  for(let i=0;i<len;i++)bytes[i]=bin.charCodeAt(i);
+  const blob=new Blob([bytes],{type:mimeType});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=fileName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},500);
+}
+
+function openExportModal(){
+  const allLocs=Array.from(new Set([
+    ...locations,
+    ...parts.map(p=>String(p.loc||'').trim()).filter(Boolean)
+  ]));
+  modal(`
+    <h3>Export Laporan Holding TB</h3>
+    <p style="font-size:13px;color:var(--muted);margin-top:-4px">
+      Pilih lokasi part dan format file yang ingin diunduh (Layout Landscape A4).
+    </p>
+    <label>Filter Current Location
+      <select id="expLoc">
+        <option value="ALL">Semua Lokasi (${parts.length} part)</option>
+        ${allLocs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')}
+      </select>
+    </label>
+    <label>Pilih Format Dokumen
+      <div class="fmt-grid">
+        <button type="button" class="ex" id="btnExpXlsx">${ICO.fileSheet}<span>Excel (.xlsx)</span></button>
+        <button type="button" class="p" id="btnExpPdf">${ICO.filePdf}<span>PDF (.pdf)</span></button>
+      </div>
+    </label>
+  `);
+  const triggerExport=fmt=>run(async()=>{
+    const loc=$('#expLoc').value;
+    const res=await api('export',{loc,fmt});
+    downloadBase64File(res.base64,res.fileName,res.mimeType);
+    closeM();
+    toast('File '+res.fileName+' berhasil diunduh');
+  });
+  $('#btnExpXlsx').onclick=()=>triggerExport('xlsx');
+  $('#btnExpPdf').onclick=()=>triggerExport('pdf');
 }
 
 function listView(){
@@ -734,7 +877,12 @@ function listView(){
         </select>
         <button class=s id=rf type=button>${ICO.refresh}<span>Muat ulang</span></button>
       </div>
-      <small id=cnt></small>
+      <div class="list-meta">
+        <small id=cnt></small>
+        <button type="button" class="ex" id="btnExport" style="padding:7px 12px;font-size:12.5px">
+          ${ICO.download}<span>Export Excel / PDF</span>
+        </button>
+      </div>
     </div>
     <div id=ls></div>`;
   const draw=()=>{
@@ -756,6 +904,7 @@ function listView(){
   };
   draw();$('#q').oninput=draw;$('#fs').onchange=draw;
   $('#rf').onclick=()=>run(async()=>{await load();draw()});
+  $('#btnExport').onclick=openExportModal;
   $('#ls').onclick=e=>{const i=e.target.closest('.item');if(i)detail(i.dataset.bc)};
   $('#sc').onclick=()=>scan(c=>{
     if(parts.some(p=>p.bc===c))detail(c);
@@ -765,13 +914,14 @@ function listView(){
 }
 
 function detail(bc){run(async()=>{
-  const {p,tl}=await api('get',{bc});
+  const {p,tl,locations:latestLocs}=await api('get',{bc});
+  if(Array.isArray(latestLocs))locations=latestLocs;
   modal(`
     <h3>${esc(p.bc)}</h3>
     <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
-    ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${p.photo}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
+    ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(p.photo)}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
     <h4 style="margin-top:12px">Update lokasi / status</h4>
-    <label>Lokasi saat ini<input id=ul value="${esc(p.loc)}"></label>
+    <label>Lokasi saat ini<select id=ul>${buildLocationOptions(p.loc)}</select></label>
     <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
     <label>Catatan<input id=un></label>
     <button class=p id=ub>Simpan update</button>
@@ -786,7 +936,9 @@ function detail(bc){run(async()=>{
     </div>`);
   if($('#zoomPhoto'))$('#zoomPhoto').onclick=()=>window.open(p.photo,'_blank');
   $('#ub').onclick=()=>run(async()=>{
-    await api('track',{bc,loc:$('#ul').value,st:$('#us').value,note:$('#un').value});
+    const newLoc=$('#ul').value.trim();
+    if(!newLoc)throw new Error('Lokasi saat ini wajib dipilih');
+    await api('track',{bc,loc:newLoc,st:$('#us').value,note:$('#un').value});
     await load();toast('Update tersimpan');closeM();detail(bc);if(view==='list')listView();
   });
   $('#ed').onclick=()=>{closeM();go('in',p)};
