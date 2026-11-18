@@ -859,7 +859,7 @@ function authView(reg){
   <p class=ctr><a href=# id=sw>${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</a></p>
   <p class=ctr><small>Lupa password? <a href="${WA}" target=_blank rel=noopener>Hubungi admin via WhatsApp</a></small></p></div>`;
   $('#sw').onclick=e=>{e.preventDefault();authView(!reg)};
-  $('#go').onclick=()=>run(async()=>{
+  const submitAuth=()=>run(async()=>{
     const nip=$('#nip').value.trim(),pw=$('#pw').value;
     if(reg){
       if(!/^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{8,}$/.test(pw))throw new Error('Password minimal 8 karakter, berisi huruf dan karakter spesial');
@@ -867,6 +867,11 @@ function authView(reg){
     }
     const r=await api('login',{nip,pw});tok=r.t;me=r.u;localStorage.setItem('tok',tok);localStorage.setItem('me',JSON.stringify(me));
     hdr();await load();go('list');
+  });
+  $('#go').onclick=submitAuth;
+  ['#nip','#nm','#pw'].forEach(sel=>{
+    const el=$(sel);
+    if(el)el.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitAuth()}};
   });
 }
 
