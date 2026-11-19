@@ -236,6 +236,25 @@ input[readonly]{
 }
 textarea{resize:vertical;min-height:76px}
 
+/* Highlight kolom hasil OCR */
+.ocr-filled{
+  background:#fefce8 !important;
+  border-color:#f59e0b !important;
+  box-shadow:0 0 0 3px rgba(245,158,11,.15) !important;
+}
+.ocr-tag{
+  display:inline-block;
+  margin-left:6px;
+  padding:1px 6px;
+  font-size:10px;
+  font-weight:700;
+  color:#b45309;
+  background:#fef3c7;
+  border:1px solid #fcd34d;
+  border-radius:999px;
+  vertical-align:middle;
+}
+
 /* Buttons */
 button{
   font:inherit;font-size:13.5px;font-weight:600;
@@ -1110,29 +1129,73 @@ function inView(p){
     acInput.addEventListener('change',autoFillOwner);
   }
 
+  const clearOcrMarks=()=>{
+    app.querySelectorAll('.ocr-filled').forEach(el=>el.classList.remove('ocr-filled'));
+    app.querySelectorAll('.ocr-tag').forEach(tag=>tag.remove());
+  };
+
+  const markOcrField=el=>{
+    if(!el)return;
+    el.classList.add('ocr-filled');
+    const lbl=el.closest('label');
+    if(lbl && !lbl.querySelector('.ocr-tag')){
+      const badge=document.createElement('span');
+      badge.className='ocr-tag';
+      badge.textContent='OCR • Cek Ulang';
+      const firstInput=lbl.querySelector('input,select,textarea,.row');
+      lbl.insertBefore(badge,firstInput||null);
+    }
+    const unmark=()=>{
+      el.classList.remove('ocr-filled');
+      const b=lbl && lbl.querySelector('.ocr-tag');
+      if(b)b.remove();
+    };
+    el.addEventListener('input',unmark,{once:true});
+    el.addEventListener('change',unmark,{once:true});
+  };
+
   const applyOcrResult=data=>{
     if(!data || typeof data!=='object')return;
+    clearOcrMarks();
     const textKeys=['ac','owner','desc','pn','sn','qty','rno','rdet','disc','wno','wdet','rby','dby'];
     if(!edit && data.bc && !$('#f_bc').value.trim()){
-      $('#f_bc').value=String(data.bc).trim().toUpperCase();
+      const bcEl=$('#f_bc');
+      bcEl.value=String(data.bc).trim().toUpperCase();
+      markOcrField(bcEl);
     }
     textKeys.forEach(k=>{
       const el=$('#f_'+k);
       if(el && data[k]!=null && String(data[k]).trim()!==''){
         el.value=String(data[k]).trim().toUpperCase();
+        markOcrField(el);
       }
     });
     ['rdate','ddate'].forEach(k=>{
       const el=$('#f_'+k);
       const val=String(data[k]||'').trim();
-      if(el && /^\d{4}-\d{2}-\d{2}$/.test(val))el.value=val;
+      if(el && /^\d{4}-\d{2}-\d{2}$/.test(val)){
+        el.value=val;
+        markOcrField(el);
+      }
     });
-    if(data.rtype && RT.includes(data.rtype))$('#f_rtype').value=data.rtype;
-    if(data.wtype && WT.includes(data.wtype))$('#f_wtype').value=data.wtype;
+    if(data.rtype && RT.includes(data.rtype)){
+      const el=$('#f_rtype');
+      el.value=data.rtype;
+      markOcrField(el);
+    }
+    if(data.wtype && WT.includes(data.wtype)){
+      const el=$('#f_wtype');
+      el.value=data.wtype;
+      markOcrField(el);
+    }
     if(data.status==='Serviceable' || data.status==='Unserviceable'){
-      $('#f_status').value=data.status;
+      const el=$('#f_status');
+      el.value=data.status;
+      markOcrField(el);
     }
     if(acInput)acInput.dispatchEvent(new Event('change'));
+    const firstHighlighted=app.querySelector('.ocr-filled');
+    if(firstHighlighted)firstHighlighted.scrollIntoView({behavior:'smooth',block:'center'});
   };
 
   const handleOcrFile=e=>{
