@@ -854,15 +854,27 @@ document.addEventListener('click',e=>{
   if(menu && !e.target.closest('#hb'))menu.classList.remove('open');
 });
 
+const NO_SPACE_IDS = ['f_ac', 'f_pn', 'f_sn', 'f_rno', 'f_wno'];
+
 document.addEventListener('input', e => {
   const el = e.target;
   if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
   if (el.type === 'password' || el.type === 'date' || el.type === 'number' || el.type === 'file' || el.id === 'nip') return;
-  const start = el.selectionStart, end = el.selectionEnd;
-  const up = el.value.toUpperCase();
-  if (el.value !== up) {
-    el.value = up;
-    if (typeof start === 'number') el.setSelectionRange(start, end);
+  const start = el.selectionStart;
+  let val = el.value.toUpperCase();
+  let removedBefore = 0;
+  if (NO_SPACE_IDS.includes(el.id)) {
+    if (typeof start === 'number') {
+      removedBefore = (val.slice(0, start).match(/\s+/g) || []).join('').length;
+    }
+    val = val.replace(/\s+/g, '');
+  }
+  if (el.value !== val) {
+    el.value = val;
+    if (typeof start === 'number') {
+      const pos = Math.max(0, start - removedBefore);
+      el.setSelectionRange(pos, pos);
+    }
   }
 });
 
