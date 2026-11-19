@@ -1250,10 +1250,13 @@ function inView(p){
       bcEl.value=String(data.bc).trim().toUpperCase();
       markOcrField(bcEl);
     }
+    const noSpaceKeys=['ac','pn','sn','rno','wno'];
     textKeys.forEach(k=>{
       const el=$('#f_'+k);
       if(el && data[k]!=null && String(data[k]).trim()!==''){
-        el.value=String(data[k]).trim().toUpperCase();
+        let val=String(data[k]).trim().toUpperCase();
+        if(noSpaceKeys.includes(k))val=val.replace(/\s+/g,'');
+        el.value=val;
         markOcrField(el);
       }
     });
