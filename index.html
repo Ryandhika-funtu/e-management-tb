@@ -445,18 +445,23 @@ button.ex:hover{background:#d1fae5}
 .pg-info{font-size:12px;font-weight:600;color:var(--navy);padding:0 4px}
 
 /* Summary Dashboard */
-.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
 .kpi-card{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:12px;box-shadow:var(--shadow-sm);border-top:3px solid var(--navy);
+  padding:11px 10px;box-shadow:var(--shadow-sm);border-top:3px solid var(--navy);
+  display:flex;flex-direction:column;justify-content:space-between;min-width:0;
 }
 .kpi-card.ok{border-top-color:var(--green);background:#f7fcf9}
 .kpi-card.un{border-top-color:var(--red);background:#fff8f8}
-.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
-.kpi-val{font-size:21px;font-weight:700;color:var(--navy);margin-top:3px;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi-lbl{
+  font-size:clamp(9.5px,2.4vw,11px);font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.02em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.kpi-val{font-size:21px;font-weight:700;color:var(--navy);margin-top:4px;line-height:1.15;font-variant-numeric:tabular-nums}
 .kpi-card.ok .kpi-val{color:var(--green-text)}
 .kpi-card.un .kpi-val{color:var(--red-text)}
-.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:500}
+.kpi-sub{font-size:10.5px;color:var(--muted);margin-top:4px;font-weight:500;line-height:1.3}
 .sum-row{padding:10px 0;border-bottom:1px solid var(--border)}
 .sum-row:last-child{border-bottom:none;padding-bottom:0}
 .sum-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
@@ -1848,12 +1853,12 @@ function sumView(){
         <div class="kpi-card ok">
           <div class="kpi-lbl">Serviceable</div>
           <div class="kpi-val">${serv}</div>
-          <div class="kpi-sub">${pctServ}% dari tampilan</div>
+          <div class="kpi-sub">${pctServ}% dari total</div>
         </div>
         <div class="kpi-card un">
-          <div class="kpi-lbl">Un-Serviceable</div>
+          <div class="kpi-lbl" title="Un-Serviceable">Unserviceable</div>
           <div class="kpi-val">${unserv}</div>
-          <div class="kpi-sub">${total?100-pctServ:0}% dari tampilan</div>
+          <div class="kpi-sub">${total?100-pctServ:0}% dari total</div>
         </div>
       </div>
       <div class="card">
