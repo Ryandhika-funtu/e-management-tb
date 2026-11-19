@@ -1464,12 +1464,16 @@ function openExportModal(){
   const statusVal=(view==='list' && fsEl)?fsEl.value:'';
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
 
+  const hasFilter=Boolean(searchVal || statusVal);
+  const filterLabel=[searchVal, statusVal ? (isOk(statusVal)?'SERVICEABLE':'UN-SERVICEABLE') : '']
+    .filter(Boolean).join(' - ').toUpperCase();
+
   let selectedItems=[];
-  if(searchVal){
+  if(hasFilter){
     const qLow=searchVal.toLowerCase();
     selectedItems=parts.filter(p=>
       (!statusVal || isOk(p.status)===isOk(statusVal)) &&
-      [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow)
+      (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow))
     );
   }
 
@@ -1485,8 +1489,8 @@ function openExportModal(){
     </p>
     <label>Cakupan Data / Current Location
       <select id="expLoc">
-        ${searchVal?`<option value="SELECTED" selected>Export Selection Data (${selectedItems.length} part - "${esc(searchVal)}")</option>`:''}
-        <option value="ALL" ${!searchVal?'selected':''}>Semua Lokasi (${parts.length} part)</option>
+        ${hasFilter?`<option value="SELECTED" selected>${esc(filterLabel)} (${selectedItems.length} part)</option>`:''}
+        <option value="ALL" ${!hasFilter?'selected':''}>Semua Lokasi (${parts.length} part)</option>
         ${allLocs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')}
       </select>
     </label>
@@ -1500,10 +1504,10 @@ function openExportModal(){
   const triggerExport=fmt=>run(async()=>{
     const loc=$('#expLoc').value;
     if(loc==='SELECTED' && selectedItems.length===0){
-      throw new Error('Tidak ada data hasil pencarian untuk diexport');
+      throw new Error('Tidak ada data hasil filter/pencarian untuk diexport');
     }
     const payload=loc==='SELECTED'
-      ? {loc,fmt,bcs:selectedItems.map(p=>p.bc)}
+      ? {loc,fmt,bcs:selectedItems.map(p=>p.bc),label:filterLabel}
       : {loc,fmt};
     const res=await api('export',payload);
     downloadBase64File(res.base64,res.fileName,res.mimeType);
