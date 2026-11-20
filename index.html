@@ -1861,8 +1861,7 @@ function detail(bc, cioModeOnly=false){
     <small>Dibuat ${esc(p.cby)} ${esc(p.cat)}; diubah ${esc(p.uby)} ${esc(p.uat)}</small>
 
     ${cioModeOnly ? '' : `
-      <div class=row style="margin-top:12px;flex-wrap:wrap">
-        ${isPic?`<button class="${isCheckedOut?'ex':'p'}" id="btnCioAction" type="button" style="flex:1;padding:10px 14px">${isCheckedOut?ICO.chkIn:ICO.chkOut}<span>${nextCioLabel}</span></button>`:''}
+      <div class=row style="margin-top:12px">
         <button class=s id=ed type=button style="flex:1">${ICO.edit}<span>Edit</span></button>
         <button class=d id=dl type=button style="flex:1">${ICO.trash}<span>Hapus</span></button>
       </div>
