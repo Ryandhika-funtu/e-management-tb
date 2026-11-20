@@ -560,10 +560,19 @@ button.ex:hover{background:#d1fae5}
 .badge.chk-in{background:#dbeafe;color:#1d4ed8}
 .badge.chk-avail{background:#f1f5f9;color:#334155}
 
-/* Batch Selection Checkboxes */
+/* Batch Selection Checkboxes & Large Touch Zone */
+.chk-zone{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:38px;height:38px;margin:-8px 2px -8px -8px;
+  border-radius:9px;cursor:pointer;flex-shrink:0;
+}
+.chk-zone:hover,.chk-zone:active{background:rgba(11,59,111,.08)}
+.chk-cell{
+  width:46px;text-align:center;padding:4px !important;cursor:pointer;
+}
 .sel-chk{
-  width:18px !important;height:18px !important;
-  min-width:18px !important;margin:0 !important;padding:0 !important;
+  width:22px !important;height:22px !important;
+  min-width:22px !important;margin:0 !important;padding:0 !important;
   accent-color:var(--blue);cursor:pointer;flex-shrink:0;
 }
 .item.selected-card{
@@ -575,8 +584,26 @@ button.ex:hover{background:#d1fae5}
 .batch-bar{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
   background:#f8fafc;border:1px solid var(--border-strong);border-radius:10px;
-  padding:8px 12px;margin-top:10px;
+  padding:9px 12px;margin-top:10px;
 }
+.batch-preview-wrap{
+  max-height:240px;overflow:auto;
+  border:1px solid var(--border-strong);border-radius:9px;
+  margin-bottom:12px;background:#fff;
+}
+.batch-preview-tbl{
+  width:100%;border-collapse:collapse;font-size:12px;min-width:460px;
+}
+.batch-preview-tbl th{
+  position:sticky;top:0;z-index:1;
+  background:var(--navy);color:#fff;text-align:left;
+  padding:8px 9px;font-weight:600;white-space:nowrap;
+}
+.batch-preview-tbl td{
+  padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:top;
+}
+.batch-preview-tbl tr:last-child td{border-bottom:none}
+.batch-preview-tbl tr:nth-child(even) td{background:#f8fafc}
 
 /* Bottom Navigation */
 nav{
@@ -1955,27 +1982,71 @@ function triggerBatchCheckInOut(action, selectedSet, onDone){
   }
   const isOut=action==='CHECK-OUT';
   const label=isOut?'Check-Out':'Check-In';
-  askPrompt({
-    title: label + ' Massal (' + bcs.length + ' Part)',
-    msg: isOut
-      ? 'Konfirmasi pengeluaran (Check-Out) untuk ' + bcs.length + ' part terpilih sekaligus.'
-      : 'Konfirmasi pengembalian (Check-In) untuk ' + bcs.length + ' part terpilih sekaligus.',
-    label: 'Reason ' + label + ' (Berlaku untuk semua item terpilih)',
-    placeholder: isOut
-      ? 'Contoh: DIKELUARKAN UNTUK PENGERJAAN DI HANGAR 1'
-      : 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE H1-RAK 1',
-    okText: 'Proses ' + label + ' (' + bcs.length + ')'
-  }).then(reason=>{
-    if(!reason)return;
+  const items=bcs.map(bc=>parts.find(p=>p.bc===bc)||{bc,pn:'-',sn:'-',desc:'-'});
+
+  modal(`
+    <h3 style="margin-bottom:6px">Konfirmasi ${label} Massal (${items.length} Item)</h3>
+    <p style="font-size:13px;color:#334155;margin:0 0 10px">
+      Apakah Anda yakin ingin melakukan <b>${label}</b> pada <b>${items.length} item</b> berikut?
+    </p>
+    <div class="batch-preview-wrap">
+      <table class="batch-preview-tbl">
+        <thead>
+          <tr>
+            <th style="width:34px;text-align:center">No</th>
+            <th>Barcode</th>
+            <th>Part Number (P/N)</th>
+            <th>Serial Number (S/N)</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((p,idx)=>`
+            <tr>
+              <td style="text-align:center">${idx+1}</td>
+              <td><b>${esc(p.bc)}</b></td>
+              <td>${esc(p.pn)||'-'}</td>
+              <td>${esc(p.sn)||'-'}</td>
+              <td>${esc(p.desc)||'-'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <label>Reason ${label} <span style="color:var(--red)">*</span>
+      <input id="batchReasonInp" type="text" placeholder="${isOut
+        ? 'Contoh: DIKELUARKAN UNTUK PENGERJAAN DI HANGAR 1'
+        : 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE H1-RAK 1'}">
+    </label>
+    <div class="row" style="margin-top:14px;margin-bottom:0">
+      <button type="button" class="s" id="batchCancelBtn" style="flex:1">Batal</button>
+      <button type="button" class="${isOut?'p':'ex'}" id="batchConfirmBtn" style="flex:1;padding:10px 14px;font-weight:700">
+        ${isOut?ICO.chkOut:ICO.chkIn}<span>Ya, ${label} (${items.length})</span>
+      </button>
+    </div>
+  `);
+
+  $('#batchCancelBtn').onclick=closeM;
+  const submitBatch=()=>{
+    const reasonEl=$('#batchReasonInp');
+    const reason=reasonEl.value.trim();
+    if(!reason){
+      reasonEl.focus();
+      toast('Reason '+label+' wajib diisi');
+      return;
+    }
     run(async()=>{
       const res=await api('checkinout_batch',{action,bcs,reason});
       await load();
-      toast((res.count||bcs.length) + ' part berhasil di-' + label);
+      closeM();
+      toast((res.count||items.length) + ' part berhasil di-' + label);
       if(typeof onDone==='function')onDone();
     });
-  });
+  };
+  $('#batchConfirmBtn').onclick=submitBatch;
+  $('#batchReasonInp').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitBatch()}};
+  requestAnimationFrame(()=>$('#batchReasonInp').focus());
 }
-
+  
 function checkOutView(){
   const isPic=canCheckInOut();
   const selected=new Set();
@@ -2007,11 +2078,11 @@ function checkOutView(){
       </div>
       ${isPic?`
         <div class="batch-bar" id="coBatchBar" hidden>
-          <label style="display:inline-flex;align-items:center;gap:8px;margin:0;width:auto;cursor:pointer;font-size:12.5px">
+          <label style="display:inline-flex;align-items:center;gap:10px;margin:0;width:auto;cursor:pointer;font-size:13px;padding:4px 6px">
             <input type="checkbox" id="coSelAll" class="sel-chk">
             <span id="coSelAllLbl">Select All (0)</span>
           </label>
-          <button type="button" class="p" id="btnBatchCo" disabled style="width:auto;padding:7px 14px;font-size:12.5px">
+          <button type="button" class="p" id="btnBatchCo" disabled style="width:auto;padding:8px 14px;font-size:12.5px">
             ${ICO.chkOut}<span id="btnBatchCoTxt">Check-Out Terpilih (0)</span>
           </button>
         </div>
@@ -2097,7 +2168,7 @@ function checkOutView(){
           <table class="part-tbl">
             <thead>
               <tr>
-                ${isPic?'<th style="width:36px;text-align:center">Pilih</th>':''}
+                ${isPic?'<th style="width:46px;text-align:center">Pilih</th>':''}
                 <th>Barcode</th>
                 <th>A/C Reg</th>
                 <th>Description</th>
@@ -2112,7 +2183,7 @@ function checkOutView(){
                 const isSel=selected.has(p.bc);
                 return `
                   <tr class="row-item ${isOk(p.status)?'row-ok':'row-un'} ${isSel?'selected-row':''}" data-bc="${esc(p.bc)}">
-                    ${isPic?`<td style="text-align:center"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
+                    ${isPic?`<td class="chk-cell"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
                     <td><b>${esc(p.bc)}</b></td>
                     <td>${esc(p.ac)||'-'}</td>
                     <td>${esc(p.desc)||'-'}</td>
@@ -2134,8 +2205,8 @@ function checkOutView(){
         return `
           <div class="item ${isOk(p.status)?'ok':''} ${isSel?'selected-card':''}" data-bc="${esc(p.bc)}">
             <div class=row>
-              <div style="display:flex;align-items:center;gap:8px;min-width:0">
-                ${isPic?`<input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}>`:''}
+              <div style="display:flex;align-items:center;gap:4px;min-width:0">
+                ${isPic?`<label class="chk-zone" aria-label="Pilih ${esc(p.bc)}"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></label>`:''}
                 <b>${esc(p.bc)}</b>
               </div>
               <div style="display:flex;align-items:center;gap:5px">
@@ -2182,13 +2253,29 @@ function checkOutView(){
   $('#rfCo').onclick=()=>run(async()=>{await load();selected.clear();drawCo()});
   $('#btnExportCo').onclick=openExportModal;
 
+  const toggleCoItem=(bc, forceState)=>{
+    const nextState=typeof forceState==='boolean'?forceState:!selected.has(bc);
+    if(nextState)selected.add(bc);
+    else selected.delete(bc);
+    const chk=$('#coLs').querySelector(`.item-chk[data-bc="${CSS.escape(bc)}"]`);
+    if(chk){
+      chk.checked=nextState;
+      const card=chk.closest('.item');
+      if(card)card.classList.toggle('selected-card', nextState);
+      const tr=chk.closest('tr');
+      if(tr)tr.classList.toggle('selected-row', nextState);
+    }
+    syncBatchUi(getFiltered());
+  };
+
   if(isPic){
-    $('#coSelAll').onchange=e=>{
+    const handleCoSelAll=e=>{
       const r=getFiltered();
       if(e.target.checked)r.forEach(p=>selected.add(p.bc));
       else r.forEach(p=>selected.delete(p.bc));
       drawCo();
     };
+    $('#coSelAll').onclick=handleCoSelAll;
     $('#btnBatchCo').onclick=()=>{
       triggerBatchCheckInOut('CHECK-OUT', selected, ()=>{
         selected.clear();
@@ -2197,25 +2284,20 @@ function checkOutView(){
     };
   }
 
-  $('#coLs').onchange=e=>{
-    const chk=e.target.closest('.item-chk');
-    if(!chk)return;
-    const bc=chk.dataset.bc;
-    if(chk.checked)selected.add(bc);
-    else selected.delete(bc);
-    const card=chk.closest('.item');
-    if(card)card.classList.toggle('selected-card', chk.checked);
-    const tr=chk.closest('tr');
-    if(tr)tr.classList.toggle('selected-row', chk.checked);
-    syncBatchUi(getFiltered());
-  };
-
   $('#coLs').onclick=e=>{
-    if(e.target.closest('.item-chk'))return;
+    const zone=e.target.closest('.chk-zone, .chk-cell');
+    if(zone){
+      const chk=zone.querySelector('.item-chk');
+      if(chk){
+        if(e.target!==chk)e.preventDefault();
+        const nextState=e.target===chk?chk.checked:!chk.checked;
+        toggleCoItem(chk.dataset.bc, nextState);
+      }
+      return;
+    }
     const target=e.target.closest('.item, .row-item');
     if(target)detail(target.dataset.bc, true);
   };
-
   $('#scCo').onclick=()=>scan(c=>{
     const code=c.toUpperCase();
     const matched=parts.find(p=>p.bc===code && p.chk!=='CHECK-OUT');
@@ -2261,11 +2343,11 @@ function checkInView(){
       </div>
       ${isPic?`
         <div class="batch-bar" id="ciBatchBar" hidden>
-          <label style="display:inline-flex;align-items:center;gap:8px;margin:0;width:auto;cursor:pointer;font-size:12.5px">
+          <label style="display:inline-flex;align-items:center;gap:10px;margin:0;width:auto;cursor:pointer;font-size:13px;padding:4px 6px">
             <input type="checkbox" id="ciSelAll" class="sel-chk">
             <span id="ciSelAllLbl">Select All (0)</span>
           </label>
-          <button type="button" class="ex" id="btnBatchCi" disabled style="width:auto;padding:7px 14px;font-size:12.5px;font-weight:700">
+          <button type="button" class="ex" id="btnBatchCi" disabled style="width:auto;padding:8px 14px;font-size:12.5px;font-weight:700">
             ${ICO.chkIn}<span id="btnBatchCiTxt">Check-In Terpilih (0)</span>
           </button>
         </div>
@@ -2345,7 +2427,7 @@ function checkInView(){
           <table class="part-tbl">
             <thead>
               <tr>
-                ${isPic?'<th style="width:36px;text-align:center">Pilih</th>':''}
+                ${isPic?'<th style="width:46px;text-align:center">Pilih</th>':''}
                 <th>Barcode</th>
                 <th>A/C Reg</th>
                 <th>Description</th>
@@ -2360,7 +2442,7 @@ function checkInView(){
                 const isSel=selected.has(p.bc);
                 return `
                   <tr class="row-item row-un ${isSel?'selected-row':''}" data-bc="${esc(p.bc)}">
-                    ${isPic?`<td style="text-align:center"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
+                    ${isPic?`<td class="chk-cell"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
                     <td><b>${esc(p.bc)}</b></td>
                     <td>${esc(p.ac)||'-'}</td>
                     <td>${esc(p.desc)||'-'}</td>
@@ -2382,8 +2464,8 @@ function checkInView(){
         return `
           <div class="item ${isSel?'selected-card':''}" data-bc="${esc(p.bc)}">
             <div class=row>
-              <div style="display:flex;align-items:center;gap:8px;min-width:0">
-                ${isPic?`<input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}>`:''}
+              <div style="display:flex;align-items:center;gap:4px;min-width:0">
+                ${isPic?`<label class="chk-zone" aria-label="Pilih ${esc(p.bc)}"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></label>`:''}
                 <b>${esc(p.bc)}</b>
               </div>
               <div style="display:flex;align-items:center;gap:5px">
@@ -2398,6 +2480,7 @@ function checkInView(){
             </small>
           </div>`;
       }).join('')+pgHtml;
+    }join('')+pgHtml;
     }
 
     $('#ciPgSel').onchange=e=>{
@@ -2429,13 +2512,29 @@ function checkInView(){
   $('#rfCi').onclick=()=>run(async()=>{await load();selected.clear();drawCi()});
   $('#btnExportCi').onclick=openExportModal;
 
+  const toggleCiItem=(bc, forceState)=>{
+    const nextState=typeof forceState==='boolean'?forceState:!selected.has(bc);
+    if(nextState)selected.add(bc);
+    else selected.delete(bc);
+    const chk=$('#ciLs').querySelector(`.item-chk[data-bc="${CSS.escape(bc)}"]`);
+    if(chk){
+      chk.checked=nextState;
+      const card=chk.closest('.item');
+      if(card)card.classList.toggle('selected-card', nextState);
+      const tr=chk.closest('tr');
+      if(tr)tr.classList.toggle('selected-row', nextState);
+    }
+    syncBatchUi(getFiltered());
+  };
+
   if(isPic){
-    $('#ciSelAll').onchange=e=>{
+    const handleCiSelAll=e=>{
       const r=getFiltered();
       if(e.target.checked)r.forEach(p=>selected.add(p.bc));
       else r.forEach(p=>selected.delete(p.bc));
       drawCi();
     };
+    $('#ciSelAll').onclick=handleCiSelAll;
     $('#btnBatchCi').onclick=()=>{
       triggerBatchCheckInOut('CHECK-IN', selected, ()=>{
         selected.clear();
@@ -2444,21 +2543,17 @@ function checkInView(){
     };
   }
 
-  $('#ciLs').onchange=e=>{
-    const chk=e.target.closest('.item-chk');
-    if(!chk)return;
-    const bc=chk.dataset.bc;
-    if(chk.checked)selected.add(bc);
-    else selected.delete(bc);
-    const card=chk.closest('.item');
-    if(card)card.classList.toggle('selected-card', chk.checked);
-    const tr=chk.closest('tr');
-    if(tr)tr.classList.toggle('selected-row', chk.checked);
-    syncBatchUi(getFiltered());
-  };
-
   $('#ciLs').onclick=e=>{
-    if(e.target.closest('.item-chk'))return;
+    const zone=e.target.closest('.chk-zone, .chk-cell');
+    if(zone){
+      const chk=zone.querySelector('.item-chk');
+      if(chk){
+        if(e.target!==chk)e.preventDefault();
+        const nextState=e.target===chk?chk.checked:!chk.checked;
+        toggleCiItem(chk.dataset.bc, nextState);
+      }
+      return;
+    }
     const target=e.target.closest('.item, .row-item');
     if(target)detail(target.dataset.bc, true);
   };
