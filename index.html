@@ -797,7 +797,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
 
@@ -1522,14 +1522,14 @@ function listView(){
   app.innerHTML=`
     <div class=card>
       <div class=row>
-        <input id=q placeholder="CARI BARCODE / PN / SN / LOKASI" type=search>
+        <input id=q placeholder="CARI BARCODE / PN / SN / LOKASI" type=search value="${esc(listQuery)}">
         <button class=s id=sc type=button>${ICO.scan}<span>Scan</span></button>
       </div>
       <div class=row>
         <select id=fs>
-          <option value="">Semua status</option>
-          <option>Serviceable</option>
-          <option>Unserviceable</option>
+          <option value="" ${listStatus===''?'selected':''}>Semua status</option>
+          <option value="Serviceable" ${listStatus==='Serviceable'?'selected':''}>Serviceable</option>
+          <option value="Unserviceable" ${listStatus==='Unserviceable'?'selected':''}>Unserviceable</option>
         </select>
         <button class=s id=rf type=button>${ICO.refresh}<span>Muat ulang</span></button>
       </div>
@@ -1551,7 +1551,9 @@ function listView(){
   curPage=1;
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
   const draw=()=>{
-    const q=$('#q').value.toLowerCase(),f=$('#fs').value;
+    listQuery=$('#q').value;
+    listStatus=$('#fs').value;
+    const q=listQuery.toLowerCase(),f=listStatus;
     const r=parts.filter(p=>(!f||isOk(p.status)===isOk(f))&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
     const total=r.length;
     const totalPages=Math.max(1,Math.ceil(total/pageSize));
@@ -2041,15 +2043,9 @@ function sumView(){
       return;
     }
     const stFilter=$('#sumSt').value;
+    listStatus=stFilter||'';
+    listQuery=(val!=='TIDAK DIKETAHUI')?val:'';
     go('list');
-    if(stFilter){
-      $('#fs').value=stFilter;
-      $('#fs').dispatchEvent(new Event('change'));
-    }
-    if(val!=='TIDAK DIKETAHUI'){
-      $('#q').value=val;
-      $('#q').dispatchEvent(new Event('input'));
-    }
   };
 }
 
