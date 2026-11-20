@@ -1196,7 +1196,7 @@ function inView(p){
   edit=p||null;
   const v=p||{status:'Unserviceable',qty:'1'};
   photoData=v.photo||'';
-  const optSections=['Pengesahan','Sisi Belakang (15), jika perlu'];
+  const optSections=['Pekerjaan (9)','Pengesahan','Sisi Belakang (15), jika perlu'];
   app.innerHTML=`
     <div class=card>
       <h3>${p?'Edit part':'Input part baru'}</h3>
@@ -1418,7 +1418,7 @@ function inView(p){
       $('#photoWidget').scrollIntoView({behavior:'smooth',block:'center'});
       throw new Error('Foto part wajib diambil terlebih dahulu');
     }
-    const optSections=['Pengesahan','Sisi Belakang (15), jika perlu'];
+    const optSections=['Pekerjaan (9)','Pengesahan','Sisi Belakang (15), jika perlu'];
     for(const [secTitle,fs] of S){
       if(optSections.includes(secTitle))continue;
       for(const [k,lbl] of fs){
