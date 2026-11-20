@@ -1772,12 +1772,28 @@ function triggerCheckInOutAction(bc, currentChk, afterSuccess){
   });
 }
 
-function detail(bc, cioModeOnly=false){run(async()=>{
-  const {p,tl,locations:latestLocs}=await api('get',{bc});
-  if(Array.isArray(latestLocs))locations=latestLocs;
+function renderTimelineHtml(tl){
+  return tl.map(t=>`<div><b>${esc(t.loc)||'-'}</b> (${esc(formatTrackStatus(t.st))})<small>${esc(t.ts)} oleh ${esc(t.by)}${t.note?' | '+esc(t.note):''}</small></div>`).join('')||'<small>Belum ada riwayat</small>';
+}
+
+function detail(bc, cioModeOnly=false){
+  const cachedPart=parts.find(item=>item.bc===bc);
+  if(!cachedPart){
+    run(async()=>{
+      const {p}=await api('get',{bc});
+      parts.unshift(p);
+      detail(bc,cioModeOnly);
+    });
+    return;
+  }
+
+  const p=cachedPart;
   const isPic=canCheckInOut();
   const isCheckedOut=p.chk==='CHECK-OUT';
   const nextCioLabel=isCheckedOut?'Check-In':'Check-Out';
+  const thumbPhoto=p.photo && p.photo.includes('lh3.googleusercontent.com/d/') && !p.photo.includes('=')
+    ? p.photo+'=w800'
+    : p.photo;
 
   modal(`
     <h3>${esc(p.bc)}</h3>
@@ -1785,7 +1801,7 @@ function detail(bc, cioModeOnly=false){run(async()=>{
       <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
       ${p.chk?`<span class="badge ${isCheckedOut?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:'<span class="badge del">BELUM CHECK-IN/OUT</span>'}
     </div>
-    ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(p.photo)}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
+    ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(thumbPhoto)}" loading="lazy" alt="Foto Part ${esc(p.bc)}"></div>`:''}
 
     ${cioModeOnly ? `
       <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px;margin:12px 0">
@@ -1815,7 +1831,7 @@ function detail(bc, cioModeOnly=false){run(async()=>{
     `}
 
     <h4 style="margin-top:14px">Riwayat pergerakan</h4>
-    <div class=tl>${tl.map(t=>`<div><b>${esc(t.loc)||'-'}</b> (${esc(formatTrackStatus(t.st))})<small>${esc(t.ts)} oleh ${esc(t.by)}${t.note?' | '+esc(t.note):''}</small></div>`).join('')||'<small>Belum ada riwayat</small>'}</div>
+    <div class=tl id="tlBox"><small style="color:var(--muted)">Memuat riwayat pergerakan...</small></div>
     <h4>Data part</h4>
     ${S.map(([,fs])=>fs.filter(([k])=>p[k]&&k!=='status'&&k!=='loc')).filter(a=>a.length).map(fs=>`<dl>${fs.map(([k,l])=>`<dt>${l}</dt><dd>${esc(p[k])}</dd>`).join('')}</dl>`).join('')}
     <small>Dibuat ${esc(p.cby)} ${esc(p.cat)}; diubah ${esc(p.uby)} ${esc(p.uat)}</small>
@@ -1827,6 +1843,14 @@ function detail(bc, cioModeOnly=false){run(async()=>{
         <button class=d id=dl type=button style="flex:1">${ICO.trash}<span>Hapus</span></button>
       </div>
     `}`);
+
+  api('get_tracks',{bc}).then(res=>{
+    const box=$('#tlBox');
+    if(box)box.innerHTML=renderTimelineHtml(res.tl||[]);
+  }).catch(err=>{
+    const box=$('#tlBox');
+    if(box)box.innerHTML=`<small style="color:var(--red-text)">Gagal memuat riwayat: ${esc(err.message)}</small>`;
+  });
 
   if($('#zoomPhoto'))$('#zoomPhoto').onclick=()=>window.open(p.photo,'_blank');
 
@@ -1897,7 +1921,7 @@ function detail(bc, cioModeOnly=false){run(async()=>{
       }
     };
   }
-})}
+}
 
 function cioView(){
   app.innerHTML=`
