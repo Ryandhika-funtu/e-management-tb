@@ -1950,11 +1950,12 @@ function cioView(){
       ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part`
       : '0 part';
 
-    $('#cioLs').classList.toggle('cards-grid', cioMode==='cards');
     if(!total){
+      $('#cioLs').classList.remove('cards-grid');
       $('#cioLs').innerHTML='<div class="card ctr">Belum ada part dengan status Check-In / Check-Out.</div>';
       return;
     }
+    $('#cioLs').classList.toggle('cards-grid', cioMode==='cards');
 
     const pgHtml=`
       <div class="pg-bar">
