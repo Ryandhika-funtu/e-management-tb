@@ -190,16 +190,16 @@ main{
   #logList.cards-grid .log-item{
     margin-bottom:0;
   }
-  /* Grid 2 kolom untuk tampilan Cards di Daftar & Check-In/Out */
-  #ls.cards-grid,#cioLs.cards-grid{
+  /* Grid 2 kolom untuk tampilan Cards di Daftar, Check-Out & Check-In */
+  #ls.cards-grid,#coLs.cards-grid,#ciLs.cards-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px;
   }
-  #ls.cards-grid .item,#cioLs.cards-grid .item{
+  #ls.cards-grid .item,#coLs.cards-grid .item,#ciLs.cards-grid .item{
     margin-bottom:0;
   }
-  #ls.cards-grid .pg-bar,#cioLs.cards-grid .pg-bar{
+  #ls.cards-grid .pg-bar,#coLs.cards-grid .pg-bar,#ciLs.cards-grid .pg-bar{
     grid-column:1 / -1;
     margin-top:0;
   }
@@ -558,6 +558,25 @@ button.ex:hover{background:#d1fae5}
 .badge.del{background:#f1f5f9;color:#475569}
 .badge.chk-out{background:#fef3c7;color:#b45309}
 .badge.chk-in{background:#dbeafe;color:#1d4ed8}
+.badge.chk-avail{background:#f1f5f9;color:#334155}
+
+/* Batch Selection Checkboxes */
+.sel-chk{
+  width:18px !important;height:18px !important;
+  min-width:18px !important;margin:0 !important;padding:0 !important;
+  accent-color:var(--blue);cursor:pointer;flex-shrink:0;
+}
+.item.selected-card{
+  box-shadow:0 0 0 2px var(--blue),var(--shadow-md);
+}
+.part-tbl tbody tr.selected-row{
+  background:#e0f2fe !important;
+}
+.batch-bar{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  background:#f8fafc;border:1px solid var(--border-strong);border-radius:10px;
+  padding:8px 12px;margin-top:10px;
+}
 
 /* Bottom Navigation */
 nav{
@@ -846,7 +865,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',cioMode=localStorage.getItem('cioMode')||'cards',cioQuery='',cioFilter='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
 const canCheckInOut=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
@@ -983,7 +1002,8 @@ function nav(){
   $('#nav').innerHTML=me?[
     ['in',ICO.plus,'Input Data'],
     ['list',ICO.list,'Daftar'],
-    ['cio',ICO.swap,'Check-In/Out'],
+    ['co',ICO.chkOut,'Check-Out'],
+    ['ci',ICO.chkIn,'Check-In'],
     ['sum',ICO.chart,'Summary'],
     ...(me.r==='admin'?[['adm',ICO.admin,'Admin']]:[])
   ].map(([k,i,l])=>`<button class="${view===k?'on':''}" data-v=${k}>${i}<span>${l}</span></button>`).join(''):'';
@@ -993,7 +1013,7 @@ function go(v,p){
   view=v;
   app.classList.toggle('narrow-view', v==='in' || (v==='adm' && admSub==='users'));
   nav();
-  ({in:()=>inView(p),list:listView,cio:cioView,sum:sumView,adm:admView})[v]();
+  ({in:()=>inView(p),list:listView,co:checkOutView,ci:checkInView,sum:sumView,adm:admView})[v]();
   requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
 }
 
@@ -1509,29 +1529,33 @@ function downloadBase64File(base64,fileName,mimeType){
 }
 
 function openExportModal(){
-  const isCioView=view==='cio';
-  const qEl=isCioView?$('#qCio'):$('#q');
-  const fsEl=isCioView?$('#fsCio'):$('#fs');
-  const searchVal=((view==='list' || isCioView) && qEl)?qEl.value.trim():'';
-  const statusVal=((view==='list' || isCioView) && fsEl)?fsEl.value:'';
+  const isCoView=view==='co';
+  const isCiView=view==='ci';
+  const isCheckView=isCoView || isCiView;
+  const qEl=isCoView?$('#qCo'):(isCiView?$('#qCi'):$('#q'));
+  const fsEl=isCoView?$('#fsCo'):(isCiView?null:$('#fs'));
+  const searchVal=((view==='list' || isCheckView) && qEl)?qEl.value.trim():'';
+  const statusVal=((view==='list' || isCoView) && fsEl)?fsEl.value:'';
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
-  const baseParts=isCioView
-    ? parts.filter(p=>p.chk==='CHECK-IN' || p.chk==='CHECK-OUT')
-    : parts;
+  const baseParts=isCoView
+    ? parts.filter(p=>p.chk!=='CHECK-OUT')
+    : (isCiView ? parts.filter(p=>p.chk==='CHECK-OUT') : parts);
 
-  const hasFilter=Boolean(isCioView || searchVal || statusVal);
-  const filterLabel=isCioView
-    ? ['CHECK-IN/OUT', searchVal, statusVal].filter(Boolean).join(' - ').toUpperCase()
-    : [searchVal, statusVal ? (isOk(statusVal)?'SERVICEABLE':'UN-SERVICEABLE') : '']
-        .filter(Boolean).join(' - ').toUpperCase();
+  const hasFilter=Boolean(isCheckView || searchVal || statusVal);
+  const filterLabel=isCoView
+    ? ['READY CHECK-OUT', searchVal, statusVal].filter(Boolean).join(' - ').toUpperCase()
+    : (isCiView
+        ? ['STATUS CHECK-OUT', searchVal].filter(Boolean).join(' - ').toUpperCase()
+        : [searchVal, statusVal ? (isOk(statusVal)?'SERVICEABLE':'UN-SERVICEABLE') : '']
+            .filter(Boolean).join(' - ').toUpperCase());
 
   let selectedItems=[];
   if(hasFilter){
     const qLow=searchVal.toLowerCase();
     selectedItems=baseParts.filter(p=>{
-      const matchSt=isCioView
-        ? (!statusVal || p.chk===statusVal)
-        : (!statusVal || isOk(p.status)===isOk(statusVal));
+      const matchSt=isCoView
+        ? (!statusVal || (statusVal==='AVAIL' ? !p.chk : p.chk==='CHECK-IN'))
+        : (isCiView ? true : (!statusVal || isOk(p.status)===isOk(statusVal)));
       return matchSt && (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow));
     });
   }
@@ -1858,9 +1882,10 @@ function detail(bc, cioModeOnly=false){
     $('#btnCioAction').onclick=()=>{
       triggerCheckInOutAction(bc, p.chk, ()=>{
         closeM();
-        detail(bc, cioModeOnly);
-        if(view==='list')listView();
-        else if(view==='cio')cioView();
+        if(view==='list'){detail(bc,false);listView();}
+        else if(view==='co')checkOutView();
+        else if(view==='ci')checkInView();
+        else detail(bc, cioModeOnly);
       });
     };
   }
@@ -1923,169 +1948,537 @@ function detail(bc, cioModeOnly=false){
   }
 }
 
-function cioView(){
+function triggerBatchCheckInOut(action, selectedSet, onDone){
+  const bcs=Array.from(selectedSet);
+  if(!bcs.length){
+    toast('Pilih minimal 1 part terlebih dahulu');
+    return;
+  }
+  const isOut=action==='CHECK-OUT';
+  const label=isOut?'Check-Out':'Check-In';
+  askPrompt({
+    title: label + ' Massal (' + bcs.length + ' Part)',
+    msg: isOut
+      ? 'Konfirmasi pengeluaran (Check-Out) untuk ' + bcs.length + ' part terpilih sekaligus.'
+      : 'Konfirmasi pengembalian (Check-In) untuk ' + bcs.length + ' part terpilih sekaligus.',
+    label: 'Reason ' + label + ' (Berlaku untuk semua item terpilih)',
+    placeholder: isOut
+      ? 'Contoh: DIKELUARKAN UNTUK PENGERJAAN DI HANGAR 1'
+      : 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE H1-RAK 1',
+    okText: 'Proses ' + label + ' (' + bcs.length + ')'
+  }).then(reason=>{
+    if(!reason)return;
+    run(async()=>{
+      const res=await api('checkinout_batch',{action,bcs,reason});
+      await load();
+      toast((res.count||bcs.length) + ' part berhasil di-' + label);
+      if(typeof onDone==='function')onDone();
+    });
+  });
+}
+
+function checkOutView(){
+  const isPic=canCheckInOut();
+  const selected=new Set();
   app.innerHTML=`
     <div class=card>
       <div class=row>
-        <input id=qCio placeholder="CARI BARCODE / PN / SN / LOKASI" type=search value="${esc(cioQuery)}">
-        <button class=s id=scCio type=button>${ICO.scan}<span>Scan</span></button>
+        <input id=qCo placeholder="FILTER LOKASI (MIS: H1-RAK 1) / BARCODE / PN / SN" type=search value="${esc(coQuery)}">
+        <button class=s id=scCo type=button>${ICO.scan}<span>Scan</span></button>
       </div>
       <div class=row>
-        <select id=fsCio>
-          <option value="" ${cioFilter===''?'selected':''}>Semua Check-In/Out</option>
-          <option value="CHECK-OUT" ${cioFilter==='CHECK-OUT'?'selected':''}>Check-Out</option>
-          <option value="CHECK-IN" ${cioFilter==='CHECK-IN'?'selected':''}>Check-In</option>
+        <select id=fsCo>
+          <option value="" ${coStatus===''?'selected':''}>Semua Siap Check-Out (Avail &amp; Check-In)</option>
+          <option value="AVAIL" ${coStatus==='AVAIL'?'selected':''}>Avail (Belum Pernah Check-In/Out)</option>
+          <option value="CHECK-IN" ${coStatus==='CHECK-IN'?'selected':''}>Check-In</option>
         </select>
-        <button class=s id=rfCio type=button>${ICO.refresh}<span>Muat ulang</span></button>
+        <button class=s id=rfCo type=button>${ICO.refresh}<span>Muat ulang</span></button>
       </div>
       <div class="list-meta" style="gap:6px">
-        <small id=cntCio style="white-space:nowrap"></small>
+        <small id=cntCo style="white-space:nowrap"></small>
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
           <div class="view-toggle" role="group" aria-label="Mode Tampilan">
-            <button type="button" id="cioCards" class="${cioMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
-            <button type="button" id="cioTable" class="${cioMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
+            <button type="button" id="coCards" class="${coMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
+            <button type="button" id="coTable" class="${coMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
           </div>
-          <button type="button" class="ex" id="btnExportCio" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
+          <button type="button" class="ex" id="btnExportCo" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
             ${ICO.download}<span>Export</span>
           </button>
         </div>
       </div>
+      ${isPic?`
+        <div class="batch-bar" id="coBatchBar" hidden>
+          <label style="display:inline-flex;align-items:center;gap:8px;margin:0;width:auto;cursor:pointer;font-size:12.5px">
+            <input type="checkbox" id="coSelAll" class="sel-chk">
+            <span id="coSelAllLbl">Select All (0)</span>
+          </label>
+          <button type="button" class="p" id="btnBatchCo" disabled style="width:auto;padding:7px 14px;font-size:12.5px">
+            ${ICO.chkOut}<span id="btnBatchCoTxt">Check-Out Terpilih (0)</span>
+          </button>
+        </div>
+      `:''}
     </div>
-    <div id=cioLs></div>`;
+    <div id=coLs></div>`;
 
-  let cioPage=1;
+  let coPage=1;
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
-  const drawCio=()=>{
-    cioQuery=$('#qCio').value;
-    cioFilter=$('#fsCio').value;
-    const q=cioQuery.toLowerCase(),f=cioFilter;
-    const r=parts.filter(p=>
-      (p.chk==='CHECK-IN' || p.chk==='CHECK-OUT') &&
-      (!f || p.chk===f) &&
+  const getFiltered=()=>{
+    coQuery=$('#qCo').value;
+    coStatus=$('#fsCo').value;
+    const q=coQuery.toLowerCase(),f=coStatus;
+    return parts.filter(p=>
+      p.chk!=='CHECK-OUT' &&
+      (!f || (f==='AVAIL' ? !p.chk : p.chk==='CHECK-IN')) &&
       (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
     );
+  };
+
+  const syncBatchUi=(filtered)=>{
+    if(!isPic)return;
+    const bar=$('#coBatchBar');
+    if(!bar)return;
+    bar.hidden=filtered.length===0;
+    const filteredBcs=filtered.map(p=>p.bc);
+    const selectedInFilter=filteredBcs.filter(bc=>selected.has(bc)).length;
+    const allChecked=filteredBcs.length>0 && selectedInFilter===filteredBcs.length;
+
+    const selAll=$('#coSelAll');
+    selAll.checked=allChecked;
+    selAll.indeterminate=selectedInFilter>0 && !allChecked;
+    $('#coSelAllLbl').textContent=`Select All (${filtered.length} hasil filter)`;
+
+    const btn=$('#btnBatchCo');
+    btn.disabled=selected.size===0;
+    $('#btnBatchCoTxt').textContent=`Check-Out Terpilih (${selected.size})`;
+  };
+
+  const drawCo=()=>{
+    const r=getFiltered();
     const total=r.length;
     const totalPages=Math.max(1,Math.ceil(total/pageSize));
-    if(cioPage>totalPages)cioPage=totalPages;
-    const startIdx=(cioPage-1)*pageSize;
+    if(coPage>totalPages)coPage=totalPages;
+    const startIdx=(coPage-1)*pageSize;
     const paged=r.slice(startIdx,startIdx+pageSize);
 
-    $('#cntCio').textContent=total
+    $('#cntCo').textContent=total
       ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part`
       : '0 part';
 
+    syncBatchUi(r);
+
     if(!total){
-      $('#cioLs').classList.remove('cards-grid');
-      $('#cioLs').innerHTML='<div class="card ctr">Belum ada part dengan status Check-In / Check-Out.</div>';
+      $('#coLs').classList.remove('cards-grid');
+      $('#coLs').innerHTML='<div class="card ctr">Tidak ada part Avail / Check-In yang sesuai filter.</div>';
       return;
     }
-    $('#cioLs').classList.toggle('cards-grid', cioMode==='cards');
+    $('#coLs').classList.toggle('cards-grid', coMode==='cards');
 
     const pgHtml=`
       <div class="pg-bar">
         <div class="pg-size">
           <span>Tampilkan</span>
-          <select id="cioPgSel">
+          <select id="coPgSel">
             ${[20,50,100].map(n=>`<option value="${n}" ${pageSize===n?'selected':''}>${n}</option>`).join('')}
           </select>
         </div>
         <div class="pg-ctrl">
-          <button type="button" class="s" id="cioPgPrev" ${cioPage<=1?'disabled':''}>&lsaquo; Prev</button>
-          <span class="pg-info">Hal ${cioPage} / ${totalPages}</span>
-          <button type="button" class="s" id="cioPgNext" ${cioPage>=totalPages?'disabled':''}>Next &rsaquo;</button>
+          <button type="button" class="s" id="coPgPrev" ${coPage<=1?'disabled':''}>&lsaquo; Prev</button>
+          <span class="pg-info">Hal ${coPage} / ${totalPages}</span>
+          <button type="button" class="s" id="coPgNext" ${coPage>=totalPages?'disabled':''}>Next &rsaquo;</button>
         </div>
       </div>`;
 
-    if(cioMode==='table'){
-      $('#cioLs').innerHTML=`
+    const chkBadge=p=>p.chk==='CHECK-IN'
+      ? '<span class="badge chk-in">CHECK-IN</span>'
+      : '<span class="badge chk-avail">AVAIL</span>';
+
+    if(coMode==='table'){
+      $('#coLs').innerHTML=`
         <div class="tbl-wrap">
           <table class="part-tbl">
             <thead>
               <tr>
+                ${isPic?'<th style="width:36px;text-align:center">Pilih</th>':''}
                 <th>Barcode</th>
                 <th>A/C Reg</th>
                 <th>Description</th>
                 <th>Part Number</th>
                 <th>Serial Number</th>
                 <th>Lokasi</th>
-                <th>Status Check</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              ${paged.map(p=>`
-                <tr class="row-item ${p.chk==='CHECK-OUT'?'row-un':'row-ok'}" data-bc="${esc(p.bc)}">
-                  <td><b>${esc(p.bc)}</b></td>
-                  <td>${esc(p.ac)||'-'}</td>
-                  <td>${esc(p.desc)||'-'}</td>
-                  <td>${esc(p.pn)||'-'}</td>
-                  <td>${esc(p.sn)||'-'}</td>
-                  <td>${esc(p.loc)||'-'}</td>
-                  <td>
-                    <span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>
-                    <span class="badge ${isOk(p.status)?'ok':''}" style="margin-left:4px">${isOk(p.status)?'SVC':'UNSVC'}</span>
-                  </td>
-                </tr>`).join('')}
+              ${paged.map(p=>{
+                const isSel=selected.has(p.bc);
+                return `
+                  <tr class="row-item ${isOk(p.status)?'row-ok':'row-un'} ${isSel?'selected-row':''}" data-bc="${esc(p.bc)}">
+                    ${isPic?`<td style="text-align:center"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
+                    <td><b>${esc(p.bc)}</b></td>
+                    <td>${esc(p.ac)||'-'}</td>
+                    <td>${esc(p.desc)||'-'}</td>
+                    <td>${esc(p.pn)||'-'}</td>
+                    <td>${esc(p.sn)||'-'}</td>
+                    <td>${esc(p.loc)||'-'}</td>
+                    <td>
+                      ${chkBadge(p)}
+                      <span class="badge ${isOk(p.status)?'ok':''}" style="margin-left:4px">${isOk(p.status)?'SVC':'UNSVC'}</span>
+                    </td>
+                  </tr>`;
+              }).join('')}
             </tbody>
           </table>
         </div>${pgHtml}`;
     }else{
-      $('#cioLs').innerHTML=paged.map(p=>`
-        <div class="item ${p.chk==='CHECK-OUT'?'':'ok'}" data-bc="${esc(p.bc)}">
-          <div class=row>
-            <b>${esc(p.bc)}</b>
-            <div style="display:flex;align-items:center;gap:5px">
-              <span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>
-              <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'SVC':'UNSVC'}</span>
+      $('#coLs').innerHTML=paged.map(p=>{
+        const isSel=selected.has(p.bc);
+        return `
+          <div class="item ${isOk(p.status)?'ok':''} ${isSel?'selected-card':''}" data-bc="${esc(p.bc)}">
+            <div class=row>
+              <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                ${isPic?`<input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}>`:''}
+                <b>${esc(p.bc)}</b>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px">
+                ${chkBadge(p)}
+                <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'SVC':'UNSVC'}</span>
+              </div>
             </div>
-          </div>
-          <div>${esc(p.desc)||'-'}</div>
-          <small>
-            <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
-            ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
-          </small>
-        </div>`).join('')+pgHtml;
+            <div>${esc(p.desc)||'-'}</div>
+            <small>
+              <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
+              ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
+            </small>
+          </div>`;
+      }).join('')+pgHtml;
     }
 
-    $('#cioPgSel').onchange=e=>{
+    $('#coPgSel').onchange=e=>{
       pageSize=+e.target.value;
       localStorage.setItem('pageSize',String(pageSize));
-      cioPage=1;
-      drawCio();
+      coPage=1;
+      drawCo();
     };
-    $('#cioPgPrev').onclick=()=>{if(cioPage>1){cioPage--;drawCio();window.scrollTo({top:0,behavior:'smooth'})}};
-    $('#cioPgNext').onclick=()=>{if(cioPage<totalPages){cioPage++;drawCio();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#coPgPrev').onclick=()=>{if(coPage>1){coPage--;drawCo();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#coPgNext').onclick=()=>{if(coPage<totalPages){coPage++;drawCo();window.scrollTo({top:0,behavior:'smooth'})}};
   };
 
-  drawCio();
+  drawCo();
   let searchTimer=null;
-  $('#qCio').oninput=()=>{
+  $('#qCo').oninput=()=>{
     clearTimeout(searchTimer);
-    searchTimer=setTimeout(()=>{cioPage=1;drawCio()},120);
+    searchTimer=setTimeout(()=>{coPage=1;drawCo()},120);
   };
-  $('#fsCio').onchange=()=>{cioPage=1;drawCio()};
-  $('#cioCards').onclick=()=>{
-    cioMode='cards';localStorage.setItem('cioMode','cards');
-    $('#cioCards').classList.add('active');$('#cioTable').classList.remove('active');
-    drawCio();
+  $('#fsCo').onchange=()=>{coPage=1;drawCo()};
+  $('#coCards').onclick=()=>{
+    coMode='cards';localStorage.setItem('coMode','cards');
+    $('#coCards').classList.add('active');$('#coTable').classList.remove('active');
+    drawCo();
   };
-  $('#cioTable').onclick=()=>{
-    cioMode='table';localStorage.setItem('cioMode','table');
-    $('#cioTable').classList.add('active');$('#cioCards').classList.remove('active');
-    drawCio();
+  $('#coTable').onclick=()=>{
+    coMode='table';localStorage.setItem('coMode','table');
+    $('#coTable').classList.add('active');$('#coCards').classList.remove('active');
+    drawCo();
   };
-  $('#rfCio').onclick=()=>run(async()=>{await load();drawCio()});
-  $('#btnExportCio').onclick=openExportModal;
-  $('#cioLs').onclick=e=>{
+  $('#rfCo').onclick=()=>run(async()=>{await load();selected.clear();drawCo()});
+  $('#btnExportCo').onclick=openExportModal;
+
+  if(isPic){
+    $('#coSelAll').onchange=e=>{
+      const r=getFiltered();
+      if(e.target.checked)r.forEach(p=>selected.add(p.bc));
+      else r.forEach(p=>selected.delete(p.bc));
+      drawCo();
+    };
+    $('#btnBatchCo').onclick=()=>{
+      triggerBatchCheckInOut('CHECK-OUT', selected, ()=>{
+        selected.clear();
+        drawCo();
+      });
+    };
+  }
+
+  $('#coLs').onchange=e=>{
+    const chk=e.target.closest('.item-chk');
+    if(!chk)return;
+    const bc=chk.dataset.bc;
+    if(chk.checked)selected.add(bc);
+    else selected.delete(bc);
+    const card=chk.closest('.item');
+    if(card)card.classList.toggle('selected-card', chk.checked);
+    const tr=chk.closest('tr');
+    if(tr)tr.classList.toggle('selected-row', chk.checked);
+    syncBatchUi(getFiltered());
+  };
+
+  $('#coLs').onclick=e=>{
+    if(e.target.closest('.item-chk'))return;
     const target=e.target.closest('.item, .row-item');
     if(target)detail(target.dataset.bc, true);
   };
-  $('#scCio').onclick=()=>scan(c=>{
+
+  $('#scCo').onclick=()=>scan(c=>{
     const code=c.toUpperCase();
-    const matched=parts.find(p=>p.bc===code && (p.chk==='CHECK-IN' || p.chk==='CHECK-OUT'));
+    const matched=parts.find(p=>p.bc===code && p.chk!=='CHECK-OUT');
     if(matched){
-      detail(code, true);
+      if(isPic){
+        selected.add(code);
+        $('#qCo').value=code;
+        coPage=1;
+        drawCo();
+        toast('Barcode '+code+' ditambahkan ke pilihan Check-Out');
+      }else{
+        detail(code, true);
+      }
+    }else if(parts.some(p=>p.bc===code && p.chk==='CHECK-OUT')){
+      toast('Part '+code+' sedang berstatus CHECK-OUT.');
+    }else{
+      toast('Barcode '+code+' tidak ditemukan di database.');
+    }
+  });
+}
+
+function checkInView(){
+  const isPic=canCheckInOut();
+  const selected=new Set();
+  app.innerHTML=`
+    <div class=card>
+      <div class=row>
+        <input id=qCi placeholder="FILTER LOKASI / BARCODE / PN / SN (STATUS CHECK-OUT)" type=search value="${esc(ciQuery)}">
+        <button class=s id=scCi type=button>${ICO.scan}<span>Scan</span></button>
+      </div>
+      <div class="list-meta" style="gap:6px">
+        <small id=cntCi style="white-space:nowrap"></small>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <button type="button" class="s" id="rfCi" style="padding:5px 9px;font-size:11.5px;gap:4px">${ICO.refresh}<span>Muat ulang</span></button>
+          <div class="view-toggle" role="group" aria-label="Mode Tampilan">
+            <button type="button" id="ciCards" class="${ciMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
+            <button type="button" id="ciTable" class="${ciMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
+          </div>
+          <button type="button" class="ex" id="btnExportCi" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
+            ${ICO.download}<span>Export</span>
+          </button>
+        </div>
+      </div>
+      ${isPic?`
+        <div class="batch-bar" id="ciBatchBar" hidden>
+          <label style="display:inline-flex;align-items:center;gap:8px;margin:0;width:auto;cursor:pointer;font-size:12.5px">
+            <input type="checkbox" id="ciSelAll" class="sel-chk">
+            <span id="ciSelAllLbl">Select All (0)</span>
+          </label>
+          <button type="button" class="ex" id="btnBatchCi" disabled style="width:auto;padding:7px 14px;font-size:12.5px;font-weight:700">
+            ${ICO.chkIn}<span id="btnBatchCiTxt">Check-In Terpilih (0)</span>
+          </button>
+        </div>
+      `:''}
+    </div>
+    <div id=ciLs></div>`;
+
+  let ciPage=1;
+  const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
+  const getFiltered=()=>{
+    ciQuery=$('#qCi').value;
+    const q=ciQuery.toLowerCase();
+    return parts.filter(p=>
+      p.chk==='CHECK-OUT' &&
+      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
+    );
+  };
+
+  const syncBatchUi=(filtered)=>{
+    if(!isPic)return;
+    const bar=$('#ciBatchBar');
+    if(!bar)return;
+    bar.hidden=filtered.length===0;
+    const filteredBcs=filtered.map(p=>p.bc);
+    const selectedInFilter=filteredBcs.filter(bc=>selected.has(bc)).length;
+    const allChecked=filteredBcs.length>0 && selectedInFilter===filteredBcs.length;
+
+    const selAll=$('#ciSelAll');
+    selAll.checked=allChecked;
+    selAll.indeterminate=selectedInFilter>0 && !allChecked;
+    $('#ciSelAllLbl').textContent=`Select All (${filtered.length} hasil filter)`;
+
+    const btn=$('#btnBatchCi');
+    btn.disabled=selected.size===0;
+    $('#btnBatchCiTxt').textContent=`Check-In Terpilih (${selected.size})`;
+  };
+
+  const drawCi=()=>{
+    const r=getFiltered();
+    const total=r.length;
+    const totalPages=Math.max(1,Math.ceil(total/pageSize));
+    if(ciPage>totalPages)ciPage=totalPages;
+    const startIdx=(ciPage-1)*pageSize;
+    const paged=r.slice(startIdx,startIdx+pageSize);
+
+    $('#cntCi').textContent=total
+      ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part`
+      : '0 part';
+
+    syncBatchUi(r);
+
+    if(!total){
+      $('#ciLs').classList.remove('cards-grid');
+      $('#ciLs').innerHTML='<div class="card ctr">Tidak ada part berstatus Check-Out saat ini.</div>';
+      return;
+    }
+    $('#ciLs').classList.toggle('cards-grid', ciMode==='cards');
+
+    const pgHtml=`
+      <div class="pg-bar">
+        <div class="pg-size">
+          <span>Tampilkan</span>
+          <select id="ciPgSel">
+            ${[20,50,100].map(n=>`<option value="${n}" ${pageSize===n?'selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pg-ctrl">
+          <button type="button" class="s" id="ciPgPrev" ${ciPage<=1?'disabled':''}>&lsaquo; Prev</button>
+          <span class="pg-info">Hal ${ciPage} / ${totalPages}</span>
+          <button type="button" class="s" id="ciPgNext" ${ciPage>=totalPages?'disabled':''}>Next &rsaquo;</button>
+        </div>
+      </div>`;
+
+    if(ciMode==='table'){
+      $('#ciLs').innerHTML=`
+        <div class="tbl-wrap">
+          <table class="part-tbl">
+            <thead>
+              <tr>
+                ${isPic?'<th style="width:36px;text-align:center">Pilih</th>':''}
+                <th>Barcode</th>
+                <th>A/C Reg</th>
+                <th>Description</th>
+                <th>Part Number</th>
+                <th>Serial Number</th>
+                <th>Lokasi</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paged.map(p=>{
+                const isSel=selected.has(p.bc);
+                return `
+                  <tr class="row-item row-un ${isSel?'selected-row':''}" data-bc="${esc(p.bc)}">
+                    ${isPic?`<td style="text-align:center"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
+                    <td><b>${esc(p.bc)}</b></td>
+                    <td>${esc(p.ac)||'-'}</td>
+                    <td>${esc(p.desc)||'-'}</td>
+                    <td>${esc(p.pn)||'-'}</td>
+                    <td>${esc(p.sn)||'-'}</td>
+                    <td>${esc(p.loc)||'-'}</td>
+                    <td>
+                      <span class="badge chk-out">CHECK-OUT</span>
+                      <span class="badge ${isOk(p.status)?'ok':''}" style="margin-left:4px">${isOk(p.status)?'SVC':'UNSVC'}</span>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>${pgHtml}`;
+    }else{
+      $('#ciLs').innerHTML=paged.map(p=>{
+        const isSel=selected.has(p.bc);
+        return `
+          <div class="item ${isSel?'selected-card':''}" data-bc="${esc(p.bc)}">
+            <div class=row>
+              <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                ${isPic?`<input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}>`:''}
+                <b>${esc(p.bc)}</b>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px">
+                <span class="badge chk-out">CHECK-OUT</span>
+                <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'SVC':'UNSVC'}</span>
+              </div>
+            </div>
+            <div>${esc(p.desc)||'-'}</div>
+            <small>
+              <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
+              ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
+            </small>
+          </div>`;
+      }).join('')+pgHtml;
+    }
+
+    $('#ciPgSel').onchange=e=>{
+      pageSize=+e.target.value;
+      localStorage.setItem('pageSize',String(pageSize));
+      ciPage=1;
+      drawCi();
+    };
+    $('#ciPgPrev').onclick=()=>{if(ciPage>1){ciPage--;drawCi();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#ciPgNext').onclick=()=>{if(ciPage<totalPages){ciPage++;drawCi();window.scrollTo({top:0,behavior:'smooth'})}};
+  };
+
+  drawCi();
+  let searchTimer=null;
+  $('#qCi').oninput=()=>{
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{ciPage=1;drawCi()},120);
+  };
+  $('#ciCards').onclick=()=>{
+    ciMode='cards';localStorage.setItem('ciMode','cards');
+    $('#ciCards').classList.add('active');$('#ciTable').classList.remove('active');
+    drawCi();
+  };
+  $('#ciTable').onclick=()=>{
+    ciMode='table';localStorage.setItem('ciMode','table');
+    $('#ciTable').classList.add('active');$('#ciCards').classList.remove('active');
+    drawCi();
+  };
+  $('#rfCi').onclick=()=>run(async()=>{await load();selected.clear();drawCi()});
+  $('#btnExportCi').onclick=openExportModal;
+
+  if(isPic){
+    $('#ciSelAll').onchange=e=>{
+      const r=getFiltered();
+      if(e.target.checked)r.forEach(p=>selected.add(p.bc));
+      else r.forEach(p=>selected.delete(p.bc));
+      drawCi();
+    };
+    $('#btnBatchCi').onclick=()=>{
+      triggerBatchCheckInOut('CHECK-IN', selected, ()=>{
+        selected.clear();
+        drawCi();
+      });
+    };
+  }
+
+  $('#ciLs').onchange=e=>{
+    const chk=e.target.closest('.item-chk');
+    if(!chk)return;
+    const bc=chk.dataset.bc;
+    if(chk.checked)selected.add(bc);
+    else selected.delete(bc);
+    const card=chk.closest('.item');
+    if(card)card.classList.toggle('selected-card', chk.checked);
+    const tr=chk.closest('tr');
+    if(tr)tr.classList.toggle('selected-row', chk.checked);
+    syncBatchUi(getFiltered());
+  };
+
+  $('#ciLs').onclick=e=>{
+    if(e.target.closest('.item-chk'))return;
+    const target=e.target.closest('.item, .row-item');
+    if(target)detail(target.dataset.bc, true);
+  };
+
+  $('#scCi').onclick=()=>scan(c=>{
+    const code=c.toUpperCase();
+    const matched=parts.find(p=>p.bc===code && p.chk==='CHECK-OUT');
+    if(matched){
+      if(isPic){
+        selected.add(code);
+        $('#qCi').value=code;
+        ciPage=1;
+        drawCi();
+        toast('Barcode '+code+' ditambahkan ke pilihan Check-In');
+      }else{
+        detail(code, true);
+      }
     }else if(parts.some(p=>p.bc===code)){
-      toast('Part '+code+' belum pernah Check-In/Out. Silakan proses dari menu Daftar.');
+      toast('Part '+code+' tidak sedang berstatus CHECK-OUT.');
     }else{
       toast('Barcode '+code+' tidak ditemukan di database.');
     }
