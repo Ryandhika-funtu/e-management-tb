@@ -2441,7 +2441,7 @@ function checkInView(){
               ${paged.map(p=>{
                 const isSel=selected.has(p.bc);
                 return `
-                  <tr class="row-item row-un ${isSel?'selected-row':''}" data-bc="${esc(p.bc)}">
+                  <tr class="row-item ${isOk(p.status)?'row-ok':'row-un'} ${isSel?'selected-row':''}" data-bc="${esc(p.bc)}">
                     ${isPic?`<td class="chk-cell"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
                     <td><b>${esc(p.bc)}</b></td>
                     <td>${esc(p.ac)||'-'}</td>
@@ -2462,7 +2462,7 @@ function checkInView(){
       $('#ciLs').innerHTML=paged.map(p=>{
         const isSel=selected.has(p.bc);
         return `
-          <div class="item ${isSel?'selected-card':''}" data-bc="${esc(p.bc)}">
+          <div class="item ${isOk(p.status)?'ok':''} ${isSel?'selected-card':''}" data-bc="${esc(p.bc)}">
             <div class=row>
               <div style="display:flex;align-items:center;gap:4px;min-width:0">
                 ${isPic?`<label class="chk-zone" aria-label="Pilih ${esc(p.bc)}"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></label>`:''}
