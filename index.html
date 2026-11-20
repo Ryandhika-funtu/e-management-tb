@@ -893,7 +893,8 @@ const S=[
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
-const canCheckInOut=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
+const canWrite=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
+const canCheckInOut=canWrite;
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
 
@@ -1027,7 +1028,7 @@ document.addEventListener('input', e => {
 
 function nav(){
   $('#nav').innerHTML=me?[
-    ['in',ICO.plus,'Input Data'],
+    ...(canWrite()?[['in',ICO.plus,'Input Data']]:[]),
     ['list',ICO.list,'Daftar'],
     ['co',ICO.chkOut,'Check-Out'],
     ['ci',ICO.chkIn,'Check-In'],
@@ -1037,6 +1038,10 @@ function nav(){
 }
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)};
 function go(v,p){
+  if(v==='in' && !canWrite()){
+    toast('Akses ditolak: Hanya role PIC atau Admin yang dapat mengakses Input Data');
+    v='list';
+  }
   view=v;
   app.classList.toggle('narrow-view', v==='in' || (v==='adm' && admSub==='users'));
   nav();
@@ -1628,7 +1633,90 @@ function openExportModal(){
   $('#btnExpPdf').onclick=()=>triggerExport('pdf');
 }
 
+function triggerBatchLocationUpdate(selectedSet, onDone){
+  const bcs=Array.from(selectedSet);
+  if(!bcs.length){
+    toast('Pilih minimal 1 part terlebih dahulu');
+    return;
+  }
+  const items=bcs.map(bc=>parts.find(p=>p.bc===bc)||{bc,pn:'-',sn:'-',desc:'-',loc:'-'});
+
+  modal(`
+    <h3 style="margin-bottom:6px">Update Lokasi Massal (${items.length} Item)</h3>
+    <p style="font-size:12.5px;color:#334155;margin:0 0 10px">
+      Lokasi &amp; catatan akan diperbarui pada <b>${items.length} item</b> berikut. <b>Status masing-masing item (SVC/UNSVC) tidak berubah.</b>
+    </p>
+    <div class="batch-preview-wrap">
+      <table class="batch-preview-tbl">
+        <thead>
+          <tr>
+            <th style="width:34px;text-align:center">No</th>
+            <th>Barcode</th>
+            <th>Part Number</th>
+            <th>Serial Number</th>
+            <th>Lokasi Lama</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((p,idx)=>`
+            <tr>
+              <td style="text-align:center">${idx+1}</td>
+              <td><b>${esc(p.bc)}</b></td>
+              <td>${esc(p.pn)||'-'}</td>
+              <td>${esc(p.sn)||'-'}</td>
+              <td>${esc(p.loc)||'-'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <label>Current Location Baru <span style="color:var(--red)">*</span>
+      <div class="row" style="margin-bottom:0">
+        <select id="batchLocSel">${buildLocationOptions('')}</select>
+        <button type="button" class="s" id="batchLocAdd" title="Tambah Lokasi Baru" aria-label="Tambah Lokasi Baru" style="padding:0 13px">${ICO.plusSm}</button>
+      </div>
+    </label>
+    <label>Catatan Pergerakan <span style="color:var(--red)">*</span>
+      <input id="batchLocNote" type="text" placeholder="Contoh: RELOKASI PENYIMPANAN KE RACK B2">
+    </label>
+    <div class="row" style="margin-top:14px;margin-bottom:0">
+      <button type="button" class="s" id="batchLocCancel" style="flex:1">Batal</button>
+      <button type="button" class="p" id="batchLocConfirm" style="flex:1;padding:10px 14px;font-weight:700">
+        ${ICO.check}<span>Simpan Update (${items.length})</span>
+      </button>
+    </div>
+  `);
+
+  $('#batchLocAdd').onclick=()=>promptAddLocation($('#batchLocSel'));
+  $('#batchLocCancel').onclick=closeM;
+  const submitBatchLoc=()=>{
+    const loc=$('#batchLocSel').value.trim();
+    const note=$('#batchLocNote').value.trim();
+    if(!loc){
+      $('#batchLocSel').focus();
+      toast('Current Location baru wajib dipilih');
+      return;
+    }
+    if(!note){
+      $('#batchLocNote').focus();
+      toast('Catatan pergerakan wajib diisi');
+      return;
+    }
+    run(async()=>{
+      const res=await api('track_batch',{bcs,loc,note});
+      await load();
+      closeM();
+      toast((res.count||items.length)+' part berhasil dipindahkan ke '+loc);
+      if(typeof onDone==='function')onDone();
+    });
+  };
+  $('#batchLocConfirm').onclick=submitBatchLoc;
+  $('#batchLocNote').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitBatchLoc()}};
+  requestAnimationFrame(()=>$('#batchLocSel').focus());
+}
+
 function listView(){
+  const isPic=canWrite();
+  const selected=new Set();
   app.innerHTML=`
     <div class=card>
       <div class=row>
@@ -1655,16 +1743,50 @@ function listView(){
           </button>
         </div>
       </div>
+      ${isPic?`
+        <div class="batch-bar" id="listBatchBar" hidden>
+          <label style="display:inline-flex;align-items:center;gap:10px;margin:0;width:auto;cursor:pointer;font-size:13px;padding:4px 6px">
+            <input type="checkbox" id="listSelAll" class="sel-chk">
+            <span id="listSelAllLbl">Select All (0)</span>
+          </label>
+          <button type="button" class="p" id="btnBatchListLoc" disabled style="width:auto;padding:8px 14px;font-size:12.5px">
+            ${ICO.edit}<span id="btnBatchListLocTxt">Update Lokasi (0)</span>
+          </button>
+        </div>
+      `:''}
     </div>
     <div id=ls></div>`;
 
   curPage=1;
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
-  const draw=()=>{
+  const getFiltered=()=>{
     listQuery=$('#q').value;
     listStatus=$('#fs').value;
     const q=listQuery.toLowerCase(),f=listStatus;
-    const r=parts.filter(p=>(!f||isOk(p.status)===isOk(f))&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
+    return parts.filter(p=>(!f||isOk(p.status)===isOk(f))&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
+  };
+
+  const syncBatchUi=(filtered)=>{
+    if(!isPic)return;
+    const bar=$('#listBatchBar');
+    if(!bar)return;
+    bar.hidden=filtered.length===0;
+    const filteredBcs=filtered.map(p=>p.bc);
+    const selectedInFilter=filteredBcs.filter(bc=>selected.has(bc)).length;
+    const allChecked=filteredBcs.length>0 && selectedInFilter===filteredBcs.length;
+
+    const selAll=$('#listSelAll');
+    selAll.checked=allChecked;
+    selAll.indeterminate=selectedInFilter>0 && !allChecked;
+    $('#listSelAllLbl').textContent=`Select All (${filtered.length} hasil filter)`;
+
+    const btn=$('#btnBatchListLoc');
+    btn.disabled=selected.size===0;
+    $('#btnBatchListLocTxt').textContent=`Update Lokasi (${selected.size})`;
+  };
+
+  const draw=()=>{
+    const r=getFiltered();
     const total=r.length;
     const totalPages=Math.max(1,Math.ceil(total/pageSize));
     if(curPage>totalPages)curPage=totalPages;
@@ -1675,8 +1797,11 @@ function listView(){
       ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part`
       : '0 part';
 
+    syncBatchUi(r);
+
     if(!total){
-      $('#ls').innerHTML='<div class="card ctr">Belum ada data. Buka menu Input Data untuk menambah part.</div>';
+      $('#ls').classList.remove('cards-grid');
+      $('#ls').innerHTML=`<div class="card ctr">Belum ada data.${isPic?' Buka menu Input Data untuk menambah part.':''}</div>`;
       return;
     }
 
@@ -1702,6 +1827,7 @@ function listView(){
           <table class="part-tbl">
             <thead>
               <tr>
+                ${isPic?'<th style="width:46px;text-align:center">Pilih</th>':''}
                 <th>Barcode</th>
                 <th>A/C Reg</th>
                 <th>Description</th>
@@ -1712,38 +1838,48 @@ function listView(){
               </tr>
             </thead>
             <tbody>
-              ${paged.map(p=>`
-                <tr class="row-item ${isOk(p.status)?'row-ok':'row-un'}" data-bc="${esc(p.bc)}">
-                  <td><b>${esc(p.bc)}</b></td>
-                  <td>${esc(p.ac)||'-'}</td>
-                  <td>${esc(p.desc)||'-'}</td>
-                  <td>${esc(p.pn)||'-'}</td>
-                  <td>${esc(p.sn)||'-'}</td>
-                  <td>${esc(p.loc)||'-'}</td>
-                  <td>
-                    <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
-                    ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
-                  </td>
-                </tr>`).join('')}
+              ${paged.map(p=>{
+                const isSel=selected.has(p.bc);
+                return `
+                  <tr class="row-item ${isOk(p.status)?'row-ok':'row-un'} ${isSel?'selected-row':''}" data-bc="${esc(p.bc)}">
+                    ${isPic?`<td class="chk-cell"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></td>`:''}
+                    <td><b>${esc(p.bc)}</b></td>
+                    <td>${esc(p.ac)||'-'}</td>
+                    <td>${esc(p.desc)||'-'}</td>
+                    <td>${esc(p.pn)||'-'}</td>
+                    <td>${esc(p.sn)||'-'}</td>
+                    <td>${esc(p.loc)||'-'}</td>
+                    <td>
+                      <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+                      ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
+                    </td>
+                  </tr>`;
+              }).join('')}
             </tbody>
           </table>
         </div>${pgHtml}`;
     }else{
-      $('#ls').innerHTML=paged.map(p=>`
-        <div class="item ${isOk(p.status)?'ok':''}" data-bc="${esc(p.bc)}">
-          <div class=row>
-            <b>${esc(p.bc)}</b>
-            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end">
-              ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:''}
-              <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+      $('#ls').innerHTML=paged.map(p=>{
+        const isSel=selected.has(p.bc);
+        return `
+          <div class="item ${isOk(p.status)?'ok':''} ${isSel?'selected-card':''}" data-bc="${esc(p.bc)}">
+            <div class=row>
+              <div style="display:flex;align-items:center;gap:4px;min-width:0">
+                ${isPic?`<label class="chk-zone" aria-label="Pilih ${esc(p.bc)}"><input type="checkbox" class="sel-chk item-chk" data-bc="${esc(p.bc)}" ${isSel?'checked':''}></label>`:''}
+                <b>${esc(p.bc)}</b>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+                ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:''}
+                <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+              </div>
             </div>
-          </div>
-          <div>${esc(p.desc)||'-'}</div>
-          <small>
-            <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
-            ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
-          </small>
-        </div>`).join('')+pgHtml;
+            <div>${esc(p.desc)||'-'}</div>
+            <small>
+              <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
+              ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
+            </small>
+          </div>`;
+      }).join('')+pgHtml;
     }
 
     $('#pgSel').onchange=e=>{
@@ -1773,22 +1909,66 @@ function listView(){
     $('#modeTable').classList.add('active');$('#modeCards').classList.remove('active');
     draw();
   };
-  $('#rf').onclick=()=>run(async()=>{await load();draw()});
+  $('#rf').onclick=()=>run(async()=>{await load();selected.clear();draw()});
   $('#btnExport').onclick=openExportModal;
+
+  const toggleListItem=(bc, forceState)=>{
+    const nextState=typeof forceState==='boolean'?forceState:!selected.has(bc);
+    if(nextState)selected.add(bc);
+    else selected.delete(bc);
+    const chk=$('#ls').querySelector(`.item-chk[data-bc="${CSS.escape(bc)}"]`);
+    if(chk){
+      chk.checked=nextState;
+      const card=chk.closest('.item');
+      if(card)card.classList.toggle('selected-card', nextState);
+      const tr=chk.closest('tr');
+      if(tr)tr.classList.toggle('selected-row', nextState);
+    }
+    syncBatchUi(getFiltered());
+  };
+
+  if(isPic){
+    $('#listSelAll').onclick=e=>{
+      const r=getFiltered();
+      if(e.target.checked)r.forEach(p=>selected.add(p.bc));
+      else r.forEach(p=>selected.delete(p.bc));
+      draw();
+    };
+    $('#btnBatchListLoc').onclick=()=>{
+      triggerBatchLocationUpdate(selected, ()=>{
+        selected.clear();
+        draw();
+      });
+    };
+  }
+
   $('#ls').onclick=e=>{
+    const zone=e.target.closest('.chk-zone, .chk-cell');
+    if(zone){
+      const chk=zone.querySelector('.item-chk');
+      if(chk){
+        if(e.target!==chk)e.preventDefault();
+        const nextState=e.target===chk?chk.checked:!chk.checked;
+        toggleListItem(chk.dataset.bc, nextState);
+      }
+      return;
+    }
     const target=e.target.closest('.item, .row-item');
     if(target)detail(target.dataset.bc);
   };
   $('#sc').onclick=()=>scan(async c=>{
     const code=c.toUpperCase();
     if(parts.some(p=>p.bc===code))detail(code);
-    else if(await askConfirm({
+    else if(isPic && await askConfirm({
       title:'Barcode Belum Terdaftar',
       msg:'Barcode '+code+' belum ditemukan di database. Lanjutkan ke form Input Data sekarang?',
       okText:'Input Sekarang',
       cancelText:'Cari Saja'
     })){go('in');$('#f_bc').value=code}
-    else{$('#q').value=code;curPage=1;draw()}
+    else{
+      if(!isPic)toast('Barcode '+code+' belum terdaftar di database.');
+      $('#q').value=code;curPage=1;draw();
+    }
   });
 }
 
@@ -1839,7 +2019,7 @@ function detail(bc, cioModeOnly=false){
   }
 
   const p=cachedPart;
-  const isPic=canCheckInOut();
+  const isPic=canWrite();
   const isCheckedOut=p.chk==='CHECK-OUT';
   const nextCioLabel=isCheckedOut?'Check-In':'Check-Out';
   const thumbPhoto=p.photo && p.photo.includes('lh3.googleusercontent.com/d/') && !p.photo.includes('=')
@@ -1851,20 +2031,22 @@ function detail(bc, cioModeOnly=false){
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
       <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
       ${p.chk?`<span class="badge ${isCheckedOut?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:'<span class="badge del">BELUM CHECK-IN/OUT</span>'}
+      ${!isPic?'<span class="badge del">VIEW ONLY</span>':''}
     </div>
     ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(thumbPhoto)}" loading="lazy" alt="Foto Part ${esc(p.bc)}"></div>`:''}
 
-    ${cioModeOnly ? `
+    ${!isPic ? `
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:12px 0;font-size:12px;color:var(--muted)">
+        Lokasi Saat Ini: <b style="color:var(--navy)">${esc(p.loc)||'-'}</b> &bull; Status Check-In/Out: <b style="color:var(--navy)">${esc(p.chk||'AVAIL')}</b>
+      </div>
+    ` : (cioModeOnly ? `
       <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px;margin:12px 0">
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
           Status Check-In/Out Saat Ini: <b style="color:var(--navy)">${esc(p.chk||'BELUM PERNAH CHECK-IN/OUT')}</b>
         </div>
-        ${isPic
-          ? `<button type="button" class="${isCheckedOut?'ex':'p'}" id="btnCioAction" style="width:100%">
-              ${isCheckedOut?ICO.chkIn:ICO.chkOut}<span>${nextCioLabel} Part Ini</span>
-            </button>`
-          : `<div style="font-size:12px;color:var(--muted);font-style:italic">Mode Lihat Saja (Hanya role PIC yang dapat melakukan Check-In/Out).</div>`
-        }
+        <button type="button" class="${isCheckedOut?'ex':'p'}" id="btnCioAction" style="width:100%">
+          ${isCheckedOut?ICO.chkIn:ICO.chkOut}<span>${nextCioLabel} Part Ini</span>
+        </button>
       </div>
     ` : `
       <h4 style="margin-top:12px">Update lokasi / status</h4>
@@ -1879,7 +2061,7 @@ function detail(bc, cioModeOnly=false){
       </div>
       <label>Catatan<input id=un></label>
       <button class=p id=ub>Simpan update</button>
-    `}
+    `)}
 
     <h4 style="margin-top:14px">Riwayat pergerakan</h4>
     <div class=tl id="tlBox"><small style="color:var(--muted)">Memuat riwayat pergerakan...</small></div>
@@ -1887,7 +2069,7 @@ function detail(bc, cioModeOnly=false){
     ${S.map(([,fs])=>fs.filter(([k])=>p[k]&&k!=='status'&&k!=='loc')).filter(a=>a.length).map(fs=>`<dl>${fs.map(([k,l])=>`<dt>${l}</dt><dd>${esc(p[k])}</dd>`).join('')}</dl>`).join('')}
     <small>Dibuat ${esc(p.cby)} ${esc(p.cat)}; diubah ${esc(p.uby)} ${esc(p.uat)}</small>
 
-    ${cioModeOnly ? '' : `
+    ${(!isPic || cioModeOnly) ? '' : `
       <div class=row style="margin-top:12px">
         <button class=s id=ed type=button style="flex:1">${ICO.edit}<span>Edit</span></button>
         <button class=d id=dl type=button style="flex:1">${ICO.trash}<span>Hapus</span></button>
@@ -1916,7 +2098,7 @@ function detail(bc, cioModeOnly=false){
     };
   }
 
-  if(!cioModeOnly){
+  if(isPic && !cioModeOnly){
     $('#ul_add').onclick=()=>promptAddLocation($('#ul'));
     const wasUnserv=!/^serviceable$/i.test(String(p.status||'').trim());
     const toggleCertBox=()=>{
