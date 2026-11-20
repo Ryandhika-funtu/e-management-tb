@@ -190,16 +190,16 @@ main{
   #logList.cards-grid .log-item{
     margin-bottom:0;
   }
-  /* Grid 2 kolom untuk tampilan Cards di Daftar */
-  #ls.cards-grid{
+  /* Grid 2 kolom untuk tampilan Cards di Daftar & Check-In/Out */
+  #ls.cards-grid,#cioLs.cards-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px;
   }
-  #ls.cards-grid .item{
+  #ls.cards-grid .item,#cioLs.cards-grid .item{
     margin-bottom:0;
   }
-  #ls.cards-grid .pg-bar{
+  #ls.cards-grid .pg-bar,#cioLs.cards-grid .pg-bar{
     grid-column:1 / -1;
     margin-top:0;
   }
@@ -556,6 +556,8 @@ button.ex:hover{background:#d1fae5}
 }
 .badge.ok{background:var(--green-soft);color:var(--green-text)}
 .badge.del{background:#f1f5f9;color:#475569}
+.badge.chk-out{background:#fef3c7;color:#b45309}
+.badge.chk-in{background:#dbeafe;color:#1d4ed8}
 
 /* Bottom Navigation */
 nav{
@@ -827,7 +829,10 @@ const ICO = {
   chart: `<svg class="ico ico-lg" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
   check: `<svg class="ico" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
   userCheck: `<svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>`,
-  userX: `<svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>`
+  userX: `<svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>`,
+  swap: `<svg class="ico ico-lg" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>`,
+  chkOut: `<svg class="ico" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`,
+  chkIn: `<svg class="ico" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 7 5 12 10 17"/><line x1="5" y1="12" x2="17" y2="12"/></svg>`
 };
 
 const S=[
@@ -841,7 +846,8 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',cioMode=localStorage.getItem('cioMode')||'cards',cioQuery='',cioFilter='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
+const canCheckInOut=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
 
@@ -977,6 +983,7 @@ function nav(){
   $('#nav').innerHTML=me?[
     ['in',ICO.plus,'Input Data'],
     ['list',ICO.list,'Daftar'],
+    ['cio',ICO.swap,'Check-In/Out'],
     ['sum',ICO.chart,'Summary'],
     ...(me.r==='admin'?[['adm',ICO.admin,'Admin']]:[])
   ].map(([k,i,l])=>`<button class="${view===k?'on':''}" data-v=${k}>${i}<span>${l}</span></button>`).join(''):'';
@@ -986,7 +993,7 @@ function go(v,p){
   view=v;
   app.classList.toggle('narrow-view', v==='in' || (v==='adm' && admSub==='users'));
   nav();
-  ({in:()=>inView(p),list:listView,sum:sumView,adm:admView})[v]();
+  ({in:()=>inView(p),list:listView,cio:cioView,sum:sumView,adm:admView})[v]();
   requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
 }
 
@@ -1502,23 +1509,31 @@ function downloadBase64File(base64,fileName,mimeType){
 }
 
 function openExportModal(){
-  const qEl=$('#q');
-  const fsEl=$('#fs');
-  const searchVal=(view==='list' && qEl)?qEl.value.trim():'';
-  const statusVal=(view==='list' && fsEl)?fsEl.value:'';
+  const isCioView=view==='cio';
+  const qEl=isCioView?$('#qCio'):$('#q');
+  const fsEl=isCioView?$('#fsCio'):$('#fs');
+  const searchVal=((view==='list' || isCioView) && qEl)?qEl.value.trim():'';
+  const statusVal=((view==='list' || isCioView) && fsEl)?fsEl.value:'';
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
+  const baseParts=isCioView
+    ? parts.filter(p=>p.chk==='CHECK-IN' || p.chk==='CHECK-OUT')
+    : parts;
 
-  const hasFilter=Boolean(searchVal || statusVal);
-  const filterLabel=[searchVal, statusVal ? (isOk(statusVal)?'SERVICEABLE':'UN-SERVICEABLE') : '']
-    .filter(Boolean).join(' - ').toUpperCase();
+  const hasFilter=Boolean(isCioView || searchVal || statusVal);
+  const filterLabel=isCioView
+    ? ['CHECK-IN/OUT', searchVal, statusVal].filter(Boolean).join(' - ').toUpperCase()
+    : [searchVal, statusVal ? (isOk(statusVal)?'SERVICEABLE':'UN-SERVICEABLE') : '']
+        .filter(Boolean).join(' - ').toUpperCase();
 
   let selectedItems=[];
   if(hasFilter){
     const qLow=searchVal.toLowerCase();
-    selectedItems=parts.filter(p=>
-      (!statusVal || isOk(p.status)===isOk(statusVal)) &&
-      (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow))
-    );
+    selectedItems=baseParts.filter(p=>{
+      const matchSt=isCioView
+        ? (!statusVal || p.chk===statusVal)
+        : (!statusVal || isOk(p.status)===isOk(statusVal));
+      return matchSt && (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow));
+    });
   }
 
   const allLocs=Array.from(new Set([
@@ -1654,7 +1669,10 @@ function listView(){
                   <td>${esc(p.pn)||'-'}</td>
                   <td>${esc(p.sn)||'-'}</td>
                   <td>${esc(p.loc)||'-'}</td>
-                  <td><span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span></td>
+                  <td>
+                    <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+                    ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
+                  </td>
                 </tr>`).join('')}
             </tbody>
           </table>
@@ -1664,7 +1682,10 @@ function listView(){
         <div class="item ${isOk(p.status)?'ok':''}" data-bc="${esc(p.bc)}">
           <div class=row>
             <b>${esc(p.bc)}</b>
-            <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+              ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:''}
+              <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+            </div>
           </div>
           <div>${esc(p.desc)||'-'}</div>
           <small>
@@ -1720,90 +1741,331 @@ function listView(){
   });
 }
 
-function detail(bc){run(async()=>{
+function formatTrackStatus(st){
+  if(st==='Serviceable')return 'Serviceable';
+  if(st==='Unserviceable')return 'Un-Serviceable';
+  return st || '-';
+}
+
+function triggerCheckInOutAction(bc, currentChk, afterSuccess){
+  const isCheckedOut = currentChk==='CHECK-OUT';
+  const nextAction = isCheckedOut ? 'CHECK-IN' : 'CHECK-OUT';
+  const actionLabel = isCheckedOut ? 'Check-In' : 'Check-Out';
+  askPrompt({
+    title: actionLabel + ' Part (' + bc + ')',
+    msg: isCheckedOut
+      ? 'Konfirmasi pengembalian (Check-In) part ini ke penyimpanan.'
+      : 'Konfirmasi pengeluaran (Check-Out) part ini dari penyimpanan.',
+    label: 'Reason ' + actionLabel,
+    placeholder: isCheckedOut
+      ? 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE RACK'
+      : 'Contoh: DIPINJAM UNTUK PENGERJAAN DI HANGAR 4',
+    okText: 'Simpan ' + actionLabel
+  }).then(reason=>{
+    if(!reason)return;
+    run(async()=>{
+      await api('checkinout',{bc,action:nextAction,reason});
+      await load();
+      toast('Status ' + actionLabel + ' berhasil disimpan');
+      if(typeof afterSuccess==='function')afterSuccess();
+    });
+  });
+}
+
+function detail(bc, cioModeOnly=false){run(async()=>{
   const {p,tl,locations:latestLocs}=await api('get',{bc});
   if(Array.isArray(latestLocs))locations=latestLocs;
+  const isPic=canCheckInOut();
+  const isCheckedOut=p.chk==='CHECK-OUT';
+  const nextCioLabel=isCheckedOut?'Check-In':'Check-Out';
+
   modal(`
     <h3>${esc(p.bc)}</h3>
-    <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
-    ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(p.photo)}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
-    <h4 style="margin-top:12px">Update lokasi / status</h4>
-    <label>Lokasi saat ini<div class="row" style="margin-bottom:0"><select id=ul>${buildLocationOptions(p.loc)}</select><button type="button" class="s" id="ul_add" title="Tambah Lokasi Baru" aria-label="Tambah Lokasi Baru" style="padding:0 13px">${ICO.plusSm}</button></div></label>
-    <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
-    <div id="certBox" style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px" hidden>
-      <h4 style="margin-bottom:10px"><span>Pengesahan (Wajib untuk Serviceable)</span><span class="req-badge">Wajib</span></h4>
-      <label>Removed/Inspected by (10) <span style="color:var(--red)">*</span><input id="u_rby" type="text" value="${esc(p.rby||'')}"></label>
-      <label>Date (11) <span style="color:var(--red)">*</span><input id="u_rdate" type="date" value="${esc(p.rdate||'')}"></label>
-      <label>Declared Serviceable by (12) <span style="color:var(--red)">*</span><input id="u_dby" type="text" value="${esc(p.dby||'')}"></label>
-      <label style="margin-bottom:0">Date (13) <span style="color:var(--red)">*</span><input id="u_ddate" type="date" value="${esc(p.ddate||'')}"></label>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+      <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
+      ${p.chk?`<span class="badge ${isCheckedOut?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:'<span class="badge del">BELUM CHECK-IN/OUT</span>'}
     </div>
-    <label>Catatan<input id=un></label>
-    <button class=p id=ub>Simpan update</button>
+    ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(p.photo)}" alt="Foto Part ${esc(p.bc)}"></div>`:''}
+
+    ${cioModeOnly ? `
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px;margin:12px 0">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+          Status Check-In/Out Saat Ini: <b style="color:var(--navy)">${esc(p.chk||'BELUM PERNAH CHECK-IN/OUT')}</b>
+        </div>
+        ${isPic
+          ? `<button type="button" class="${isCheckedOut?'ex':'p'}" id="btnCioAction" style="width:100%">
+              ${isCheckedOut?ICO.chkIn:ICO.chkOut}<span>${nextCioLabel} Part Ini</span>
+            </button>`
+          : `<div style="font-size:12px;color:var(--muted);font-style:italic">Mode Lihat Saja (Hanya role PIC yang dapat melakukan Check-In/Out).</div>`
+        }
+      </div>
+    ` : `
+      <h4 style="margin-top:12px">Update lokasi / status</h4>
+      <label>Lokasi saat ini<div class="row" style="margin-bottom:0"><select id=ul>${buildLocationOptions(p.loc)}</select><button type="button" class="s" id="ul_add" title="Tambah Lokasi Baru" aria-label="Tambah Lokasi Baru" style="padding:0 13px">${ICO.plusSm}</button></div></label>
+      <label>Status<select id=us><option ${p.status==='Unserviceable'?'selected':''}>Unserviceable</option><option ${p.status==='Serviceable'?'selected':''}>Serviceable</option></select></label>
+      <div id="certBox" style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px" hidden>
+        <h4 style="margin-bottom:10px"><span>Pengesahan (Wajib untuk Serviceable)</span><span class="req-badge">Wajib</span></h4>
+        <label>Removed/Inspected by (10) <span style="color:var(--red)">*</span><input id="u_rby" type="text" value="${esc(p.rby||'')}"></label>
+        <label>Date (11) <span style="color:var(--red)">*</span><input id="u_rdate" type="date" value="${esc(p.rdate||'')}"></label>
+        <label>Declared Serviceable by (12) <span style="color:var(--red)">*</span><input id="u_dby" type="text" value="${esc(p.dby||'')}"></label>
+        <label style="margin-bottom:0">Date (13) <span style="color:var(--red)">*</span><input id="u_ddate" type="date" value="${esc(p.ddate||'')}"></label>
+      </div>
+      <label>Catatan<input id=un></label>
+      <button class=p id=ub>Simpan update</button>
+    `}
+
     <h4 style="margin-top:14px">Riwayat pergerakan</h4>
-    <div class=tl>${tl.map(t=>`<div><b>${esc(t.loc)||'-'}</b> (${t.st==='Serviceable'?'Serviceable':'Un-Serviceable'})<small>${esc(t.ts)} oleh ${esc(t.by)}${t.note?' | '+esc(t.note):''}</small></div>`).join('')||'<small>Belum ada riwayat</small>'}</div>
+    <div class=tl>${tl.map(t=>`<div><b>${esc(t.loc)||'-'}</b> (${esc(formatTrackStatus(t.st))})<small>${esc(t.ts)} oleh ${esc(t.by)}${t.note?' | '+esc(t.note):''}</small></div>`).join('')||'<small>Belum ada riwayat</small>'}</div>
     <h4>Data part</h4>
     ${S.map(([,fs])=>fs.filter(([k])=>p[k]&&k!=='status'&&k!=='loc')).filter(a=>a.length).map(fs=>`<dl>${fs.map(([k,l])=>`<dt>${l}</dt><dd>${esc(p[k])}</dd>`).join('')}</dl>`).join('')}
     <small>Dibuat ${esc(p.cby)} ${esc(p.cat)}; diubah ${esc(p.uby)} ${esc(p.uat)}</small>
-    <div class=row style="margin-top:12px">
-      <button class=s id=ed type=button>${ICO.edit}<span>Edit</span></button>
-      <button class=d id=dl type=button>${ICO.trash}<span>Hapus</span></button>
-    </div>`);
-  $('#ul_add').onclick=()=>promptAddLocation($('#ul'));
-  const wasUnserv=!/^serviceable$/i.test(String(p.status||'').trim());
-  const toggleCertBox=()=>{
-    const needCert=wasUnserv && $('#us').value==='Serviceable';
-    $('#certBox').hidden=!needCert;
-  };
-  toggleCertBox();
-  $('#us').onchange=toggleCertBox;
+
+    ${cioModeOnly ? '' : `
+      <div class=row style="margin-top:12px;flex-wrap:wrap">
+        ${isPic?`<button class="${isCheckedOut?'ex':'p'}" id="btnCioAction" type="button" style="flex:1;padding:10px 14px">${isCheckedOut?ICO.chkIn:ICO.chkOut}<span>${nextCioLabel}</span></button>`:''}
+        <button class=s id=ed type=button style="flex:1">${ICO.edit}<span>Edit</span></button>
+        <button class=d id=dl type=button style="flex:1">${ICO.trash}<span>Hapus</span></button>
+      </div>
+    `}`);
 
   if($('#zoomPhoto'))$('#zoomPhoto').onclick=()=>window.open(p.photo,'_blank');
-  $('#ub').onclick=()=>run(async()=>{
-    const newLoc=$('#ul').value.trim();
-    if(!newLoc)throw new Error('Lokasi saat ini wajib dipilih');
-    const newSt=$('#us').value;
-    let cert=null;
-    if(wasUnserv && newSt==='Serviceable'){
-      const certFields=[
-        ['rby','Removed/Inspected by (10)'],
-        ['rdate','Date (11)'],
-        ['dby','Declared Serviceable by (12)'],
-        ['ddate','Date (13)']
-      ];
-      cert={};
-      for(const [k,lbl] of certFields){
-        const el=$('#u_'+k);
-        if(!el || !String(el.value||'').trim()){
-          if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus()}
-          throw new Error(lbl+' wajib diisi saat mengubah status menjadi Serviceable');
-        }
-        cert[k]=el.value.trim();
-      }
-    }
-    await api('track',{bc,loc:newLoc,st:newSt,note:$('#un').value,cert});
-    await load();toast('Update tersimpan');closeM();detail(bc);if(view==='list')listView();
-  });
-  $('#ed').onclick=()=>{closeM();go('in',p)};
-  $('#dl').onclick=async()=>{
-    const reason=await askPrompt({
-      title:'Hapus Data Part ('+bc+')',
-      msg:'Data part yang dihapus akan tercatat permanen pada Log Penghapusan Admin beserta riwayat pergerakannya.',
-      label:'Reason Deletion',
-      placeholder:'Contoh: DOUBLE INPUT / PART SCRAPPED / WRONG BARCODE',
-      okText:'Ya, Hapus Part',
-      danger:true
-    });
-    if(reason){
-      run(async()=>{
-        await api('del',{bc,reason});
-        await load();
+
+  if($('#btnCioAction')){
+    $('#btnCioAction').onclick=()=>{
+      triggerCheckInOutAction(bc, p.chk, ()=>{
         closeM();
-        toast('Part berhasil dihapus');
-        go('list');
+        detail(bc, cioModeOnly);
+        if(view==='list')listView();
+        else if(view==='cio')cioView();
       });
-    }
-  };
+    };
+  }
+
+  if(!cioModeOnly){
+    $('#ul_add').onclick=()=>promptAddLocation($('#ul'));
+    const wasUnserv=!/^serviceable$/i.test(String(p.status||'').trim());
+    const toggleCertBox=()=>{
+      const needCert=wasUnserv && $('#us').value==='Serviceable';
+      $('#certBox').hidden=!needCert;
+    };
+    toggleCertBox();
+    $('#us').onchange=toggleCertBox;
+
+    $('#ub').onclick=()=>run(async()=>{
+      const newLoc=$('#ul').value.trim();
+      if(!newLoc)throw new Error('Lokasi saat ini wajib dipilih');
+      const newSt=$('#us').value;
+      let cert=null;
+      if(wasUnserv && newSt==='Serviceable'){
+        const certFields=[
+          ['rby','Removed/Inspected by (10)'],
+          ['rdate','Date (11)'],
+          ['dby','Declared Serviceable by (12)'],
+          ['ddate','Date (13)']
+        ];
+        cert={};
+        for(const [k,lbl] of certFields){
+          const el=$('#u_'+k);
+          if(!el || !String(el.value||'').trim()){
+            if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus()}
+            throw new Error(lbl+' wajib diisi saat mengubah status menjadi Serviceable');
+          }
+          cert[k]=el.value.trim();
+        }
+      }
+      await api('track',{bc,loc:newLoc,st:newSt,note:$('#un').value,cert});
+      await load();toast('Update tersimpan');closeM();detail(bc,false);if(view==='list')listView();
+    });
+    $('#ed').onclick=()=>{closeM();go('in',p)};
+    $('#dl').onclick=async()=>{
+      const reason=await askPrompt({
+        title:'Hapus Data Part ('+bc+')',
+        msg:'Data part yang dihapus akan tercatat permanen pada Log Penghapusan Admin beserta riwayat pergerakannya.',
+        label:'Reason Deletion',
+        placeholder:'Contoh: DOUBLE INPUT / PART SCRAPPED / WRONG BARCODE',
+        okText:'Ya, Hapus Part',
+        danger:true
+      });
+      if(reason){
+        run(async()=>{
+          await api('del',{bc,reason});
+          await load();
+          closeM();
+          toast('Part berhasil dihapus');
+          go('list');
+        });
+      }
+    };
+  }
 })}
+
+function cioView(){
+  app.innerHTML=`
+    <div class=card>
+      <div class=row>
+        <input id=qCio placeholder="CARI BARCODE / PN / SN / LOKASI" type=search value="${esc(cioQuery)}">
+        <button class=s id=scCio type=button>${ICO.scan}<span>Scan</span></button>
+      </div>
+      <div class=row>
+        <select id=fsCio>
+          <option value="" ${cioFilter===''?'selected':''}>Semua Check-In/Out</option>
+          <option value="CHECK-OUT" ${cioFilter==='CHECK-OUT'?'selected':''}>Check-Out</option>
+          <option value="CHECK-IN" ${cioFilter==='CHECK-IN'?'selected':''}>Check-In</option>
+        </select>
+        <button class=s id=rfCio type=button>${ICO.refresh}<span>Muat ulang</span></button>
+      </div>
+      <div class="list-meta" style="gap:6px">
+        <small id=cntCio style="white-space:nowrap"></small>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <div class="view-toggle" role="group" aria-label="Mode Tampilan">
+            <button type="button" id="cioCards" class="${cioMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
+            <button type="button" id="cioTable" class="${cioMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
+          </div>
+          <button type="button" class="ex" id="btnExportCio" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
+            ${ICO.download}<span>Export</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id=cioLs></div>`;
+
+  let cioPage=1;
+  const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
+  const drawCio=()=>{
+    cioQuery=$('#qCio').value;
+    cioFilter=$('#fsCio').value;
+    const q=cioQuery.toLowerCase(),f=cioFilter;
+    const r=parts.filter(p=>
+      (p.chk==='CHECK-IN' || p.chk==='CHECK-OUT') &&
+      (!f || p.chk===f) &&
+      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
+    );
+    const total=r.length;
+    const totalPages=Math.max(1,Math.ceil(total/pageSize));
+    if(cioPage>totalPages)cioPage=totalPages;
+    const startIdx=(cioPage-1)*pageSize;
+    const paged=r.slice(startIdx,startIdx+pageSize);
+
+    $('#cntCio').textContent=total
+      ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part`
+      : '0 part';
+
+    $('#cioLs').classList.toggle('cards-grid', cioMode==='cards');
+    if(!total){
+      $('#cioLs').innerHTML='<div class="card ctr">Belum ada part dengan status Check-In / Check-Out.</div>';
+      return;
+    }
+
+    const pgHtml=`
+      <div class="pg-bar">
+        <div class="pg-size">
+          <span>Tampilkan</span>
+          <select id="cioPgSel">
+            ${[20,50,100].map(n=>`<option value="${n}" ${pageSize===n?'selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pg-ctrl">
+          <button type="button" class="s" id="cioPgPrev" ${cioPage<=1?'disabled':''}>&lsaquo; Prev</button>
+          <span class="pg-info">Hal ${cioPage} / ${totalPages}</span>
+          <button type="button" class="s" id="cioPgNext" ${cioPage>=totalPages?'disabled':''}>Next &rsaquo;</button>
+        </div>
+      </div>`;
+
+    if(cioMode==='table'){
+      $('#cioLs').innerHTML=`
+        <div class="tbl-wrap">
+          <table class="part-tbl">
+            <thead>
+              <tr>
+                <th>Barcode</th>
+                <th>A/C Reg</th>
+                <th>Description</th>
+                <th>Part Number</th>
+                <th>Serial Number</th>
+                <th>Lokasi</th>
+                <th>Status Check</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paged.map(p=>`
+                <tr class="row-item ${p.chk==='CHECK-OUT'?'row-un':'row-ok'}" data-bc="${esc(p.bc)}">
+                  <td><b>${esc(p.bc)}</b></td>
+                  <td>${esc(p.ac)||'-'}</td>
+                  <td>${esc(p.desc)||'-'}</td>
+                  <td>${esc(p.pn)||'-'}</td>
+                  <td>${esc(p.sn)||'-'}</td>
+                  <td>${esc(p.loc)||'-'}</td>
+                  <td>
+                    <span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>
+                    <span class="badge ${isOk(p.status)?'ok':''}" style="margin-left:4px">${isOk(p.status)?'SVC':'UNSVC'}</span>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>${pgHtml}`;
+    }else{
+      $('#cioLs').innerHTML=paged.map(p=>`
+        <div class="item ${p.chk==='CHECK-OUT'?'':'ok'}" data-bc="${esc(p.bc)}">
+          <div class=row>
+            <b>${esc(p.bc)}</b>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>
+              <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'SVC':'UNSVC'}</span>
+            </div>
+          </div>
+          <div>${esc(p.desc)||'-'}</div>
+          <small>
+            <span>PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Lokasi: ${esc(p.loc)||'-'}</span>
+            ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
+          </small>
+        </div>`).join('')+pgHtml;
+    }
+
+    $('#cioPgSel').onchange=e=>{
+      pageSize=+e.target.value;
+      localStorage.setItem('pageSize',String(pageSize));
+      cioPage=1;
+      drawCio();
+    };
+    $('#cioPgPrev').onclick=()=>{if(cioPage>1){cioPage--;drawCio();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#cioPgNext').onclick=()=>{if(cioPage<totalPages){cioPage++;drawCio();window.scrollTo({top:0,behavior:'smooth'})}};
+  };
+
+  drawCio();
+  let searchTimer=null;
+  $('#qCio').oninput=()=>{
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{cioPage=1;drawCio()},120);
+  };
+  $('#fsCio').onchange=()=>{cioPage=1;drawCio()};
+  $('#cioCards').onclick=()=>{
+    cioMode='cards';localStorage.setItem('cioMode','cards');
+    $('#cioCards').classList.add('active');$('#cioTable').classList.remove('active');
+    drawCio();
+  };
+  $('#cioTable').onclick=()=>{
+    cioMode='table';localStorage.setItem('cioMode','table');
+    $('#cioTable').classList.add('active');$('#cioCards').classList.remove('active');
+    drawCio();
+  };
+  $('#rfCio').onclick=()=>run(async()=>{await load();drawCio()});
+  $('#btnExportCio').onclick=openExportModal;
+  $('#cioLs').onclick=e=>{
+    const target=e.target.closest('.item, .row-item');
+    if(target)detail(target.dataset.bc, true);
+  };
+  $('#scCio').onclick=()=>scan(c=>{
+    const code=c.toUpperCase();
+    const matched=parts.find(p=>p.bc===code && (p.chk==='CHECK-IN' || p.chk==='CHECK-OUT'));
+    if(matched){
+      detail(code, true);
+    }else if(parts.some(p=>p.bc===code)){
+      toast('Part '+code+' belum pernah Check-In/Out. Silakan proses dari menu Daftar.');
+    }else{
+      toast('Barcode '+code+' tidak ditemukan di database.');
+    }
+  });
+}
 
 let savedScrollY=0;
 function lockBodyScroll(){
@@ -2175,10 +2437,18 @@ async function admView(){
     await run(async()=>{
       const us=await api('users');
       const L={active:'Aktif',pending:'Menunggu',off:'Nonaktif'};
+      const R={admin:'Admin',pic:'PIC',user:'User'};
       $('#ul').innerHTML='<h3>Kelola pengguna ('+us.length+')</h3>'+us.map(u=>`
         <div class=u>
-          <div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${u.r==='admin'?'Admin':'User'} | ${L[u.st]||u.st}</small></div>
+          <div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${R[u.r]||u.r} | ${L[u.st]||u.st}</small></div>
           <div class=a>
+            ${u.nip!==me.nip?`
+              <select class="role-sel" data-nip="${esc(u.nip)}" aria-label="Ubah Role" style="width:auto;margin:0;padding:5px 8px;font-size:12px;border-radius:7px">
+                <option value="user" ${u.r==='user'?'selected':''}>User</option>
+                <option value="pic" ${u.r==='pic'?'selected':''}>PIC</option>
+                <option value="admin" ${u.r==='admin'?'selected':''}>Admin</option>
+              </select>
+            `:''}
             ${u.st==='pending'?`<button class=ex data-op=approve data-nip="${esc(u.nip)}" title="Setujui Akun" aria-label="Setujui Akun">${ICO.check}</button>`:''}
             <button class=s data-op=reset data-nip="${esc(u.nip)}" title="Reset Password" aria-label="Reset Password">${ICO.key}</button>
             ${u.nip!==me.nip?`
@@ -2187,6 +2457,18 @@ async function admView(){
             `:''}
           </div>
         </div>`).join('');
+
+      $('#ul').onchange=e=>{
+        const sel=e.target.closest('.role-sel');
+        if(!sel)return;
+        const nip=sel.dataset.nip;
+        const role=sel.value;
+        run(async()=>{
+          await api('uact',{nip,op:'role',role});
+          toast('Otorisasi '+nip+' diubah menjadi '+role.toUpperCase());
+          admView();
+        });
+      };
 
       $('#ul').onclick=e=>{
         const b=e.target.closest('button');if(!b)return;
