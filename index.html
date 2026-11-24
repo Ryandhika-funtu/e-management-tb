@@ -1478,6 +1478,13 @@ function inView(p){
           <button type="button" class="s" id="btnOcrCam" style="background:var(--blue-soft);color:var(--blue);border-color:#bfdbfe">${ICO.ocr}<span>Foto Tag (OCR)</span></button>
           <button type="button" class="s" id="btnOcrGal">${ICO.gallery}<span>Tag dari Galeri</span></button>
         </div>
+        ${me && me.r==='admin' ? `
+          <div style="margin-top:8px">
+            <button type="button" class="s" id="btnAuthDriveOcr" style="width:100%;background:#fffbeb;color:#b45309;border-color:#fcd34d">
+              ${ICO.key}<span>Otorisasi Google Drive OCR (Admin)</span>
+            </button>
+          </div>
+        ` : ''}
         <div style="font-size:11.5px;color:var(--muted);margin-top:6px">Foto halaman depan tag (cetak/tulisan tangan) untuk mengisi form otomatis. Harap periksa kembali hasil pembacaan.</div>
       </div>
     </div>
@@ -1652,6 +1659,13 @@ function inView(p){
   $('#btnOcrGal').onclick=()=>$('#inpOcrGal').click();
   $('#inpOcrCam').onchange=handleOcrFile;
   $('#inpOcrGal').onchange=handleOcrFile;
+
+  if($('#btnAuthDriveOcr')){
+    $('#btnAuthDriveOcr').onclick=()=>run(async()=>{
+      const res=await api('auth_drive_ocr',{});
+      toast((res && res.message) || 'Otorisasi Drive API OCR berhasil & siap digunakan!', 'gemini', 4500);
+    });
+  }
 
   const handleFile=async e=>{
     const file=e.target.files && e.target.files[0];
