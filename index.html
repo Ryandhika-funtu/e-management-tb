@@ -1054,7 +1054,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Chk=[],over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),acOwnerMap=JSON.parse(localStorage.getItem('cache_ac_owners')||'{}'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Chk=[],over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
 const canWrite=()=>Boolean(me && ['pic','pic-h1','pic-h3','admin'].includes(me.r));
 const canCheckInOut=canWrite;
 const getPicLocPrefix=()=>me && me.r==='pic-h1' ? 'H1-' : (me && me.r==='pic-h3' ? 'H3-' : '');
@@ -1131,7 +1131,7 @@ const load=async()=>{
   }else{
     const rawParts=res.parts||[];
     const rawLocs=res.locations||[];
-    acOwnerMap=buildAcOwnerMap(rawParts);
+    acOwnerMap={...(res.acOwners||{}), ...buildAcOwnerMap(rawParts)};
     parts=pfx?rawParts.filter(p=>String(p.loc||'').trim().toUpperCase().startsWith(pfx)):rawParts;
     locations=pfx?rawLocs.filter(l=>String(l||'').trim().toUpperCase().startsWith(pfx)):rawLocs;
     owners=res.owners||[];
