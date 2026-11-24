@@ -3057,7 +3057,7 @@ function scan(cb){
 }
 
 function parsePartDate(raw){
-  const s=String(raw||'').trim();
+  const s=String(raw||'').replace(/^'+/,'').trim();
   if(!s)return null;
   let y,m,d;
   let match=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
