@@ -951,7 +951,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Chk='',over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
 const canWrite=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
 const canCheckInOut=canWrite;
 
@@ -3282,6 +3282,7 @@ function sumView(){
 
     $('#kpiOver7Card').onclick=()=>{
       over7Status=stFilter||'';
+      over7Chk='';
       sumSub='over7';
       sumView();
     };
@@ -3444,6 +3445,13 @@ function renderOver7View(){
           <option value="Serviceable" ${over7Status==='Serviceable'?'selected':''}>Serviceable</option>
           <option value="Unserviceable" ${over7Status==='Unserviceable'?'selected':''}>Un-Serviceable</option>
         </select>
+        <select id="fsOver7Chk">
+          <option value="" ${over7Chk===''?'selected':''}>Semua Check Status</option>
+          <option value="AVAIL" ${over7Chk==='AVAIL'?'selected':''}>Avail (Belum Check-In/Out)</option>
+          <option value="CHECK-IN" ${over7Chk==='CHECK-IN'?'selected':''}>Check-In</option>
+          <option value="CHECK-OUT" ${over7Chk==='CHECK-OUT'?'selected':''}>Check-Out</option>
+          <option value="INSTALLED" ${over7Chk==='INSTALLED'?'selected':''}>Installed</option>
+        </select>
         <select id="fsOver7Ac">
           <option value="" ${over7Ac===''?'selected':''}>Semua A/C Reg</option>
           ${acOpts.map(a=>`<option value="${esc(a)}" ${over7Ac===a?'selected':''}>${esc(a)}</option>`).join('')}
@@ -3472,11 +3480,13 @@ function renderOver7View(){
   const getFiltered=()=>{
     over7Query=$('#qOver7').value;
     over7Status=$('#fsOver7St').value;
+    over7Chk=$('#fsOver7Chk').value;
     over7Ac=$('#fsOver7Ac').value;
     over7Loc=$('#fsOver7Loc').value;
     const q=over7Query.toLowerCase();
     return baseOver7.filter(p=>
       (!over7Status || isOk(p.status)===isOk(over7Status)) &&
+      (!over7Chk || (over7Chk==='AVAIL' ? !p.chk : p.chk===over7Chk)) &&
       (!over7Ac || String(p.ac||'').trim().toUpperCase()===over7Ac) &&
       (!over7Loc || String(p.loc||'').trim().toUpperCase()===over7Loc) &&
       (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.rdate].join(' ').toLowerCase().includes(q))
@@ -3590,6 +3600,7 @@ function renderOver7View(){
     searchTimer=setTimeout(()=>{over7Page=1;drawOver7()},120);
   };
   $('#fsOver7St').onchange=()=>{over7Page=1;drawOver7()};
+  $('#fsOver7Chk').onchange=()=>{over7Page=1;drawOver7()};
   $('#fsOver7Ac').onchange=()=>{over7Page=1;drawOver7()};
   $('#fsOver7Loc').onchange=()=>{over7Page=1;drawOver7()};
 
@@ -3618,6 +3629,7 @@ function renderOver7View(){
     const labelParts=[
       'REMOVAL > 7 HARI',
       over7Status ? (isOk(over7Status)?'SERVICEABLE':'UN-SERVICEABLE') : '',
+      over7Chk,
       over7Ac,
       over7Loc,
       over7Query.trim()
