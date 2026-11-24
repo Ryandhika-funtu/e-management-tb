@@ -2852,10 +2852,8 @@ function checkInView(){
         $('#qCi').value=code;
         ciPage=1;
         drawCi();
-        toast('Barcode '+code+' ditambahkan ke pilihan Check-In');
-      }else{
-        detail(code, true);
       }
+      detail(code, true);
     }else if(parts.some(p=>p.bc===code)){
       toast('Part '+code+' tidak sedang berstatus CHECK-OUT.');
     }else{
@@ -3885,6 +3883,8 @@ if(me&&tok){
     go('list');
     load().then(()=>{
       if(view==='list')listView();
+      else if(view==='co')checkOutView();
+      else if(view==='ci')checkInView();
       else if(view==='sum')sumView();
     }).catch(()=>{});
   }else{
