@@ -559,6 +559,17 @@ button.ex:hover{background:#d1fae5}
 .badge.chk-out{background:#fef3c7;color:#b45309}
 .badge.chk-in{background:#dbeafe;color:#1d4ed8}
 .badge.chk-avail{background:#f1f5f9;color:#334155}
+.badge.chk-inst{background:#e0e7ff;color:#3730a3}
+.kpi-card.warn{border-top-color:#d97706;background:#fffbeb}
+.kpi-card.warn .kpi-val{color:#b45309}
+.age-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;
+  background:#fef3c7;color:#b45309;border:1px solid #fde68a;white-space:nowrap;
+}
+@media(min-width:640px){
+  .kpi-grid.kpi-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
 
 /* Batch Selection Checkboxes & Large Touch Zone */
 .chk-zone{
@@ -892,7 +903,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
 const canWrite=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
 const canCheckInOut=canWrite;
 
@@ -1570,7 +1581,7 @@ function openExportModal(){
   const statusVal=((view==='list' || isCoView) && fsEl)?fsEl.value:'';
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
   const baseParts=isCoView
-    ? parts.filter(p=>p.chk!=='CHECK-OUT')
+    ? parts.filter(p=>p.chk!=='CHECK-OUT' && p.chk!=='INSTALLED')
     : (isCiView ? parts.filter(p=>p.chk==='CHECK-OUT') : parts);
 
   const hasFilter=Boolean(isCheckView || searchVal || statusVal);
@@ -1851,7 +1862,7 @@ function listView(){
                     <td>${esc(p.loc)||'-'}</td>
                     <td>
                       <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
-                      ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
+                      ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
                     </td>
                   </tr>`;
               }).join('')}
@@ -1869,7 +1880,7 @@ function listView(){
                 <b>${esc(p.bc)}</b>
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end">
-                ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:''}
+                ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}">${esc(p.chk)}</span>`:''}
                 <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
               </div>
             </div>
@@ -1978,26 +1989,31 @@ function formatTrackStatus(st){
   return st || '-';
 }
 
-function triggerCheckInOutAction(bc, currentChk, afterSuccess){
+function triggerCheckInOutAction(bc, currentChk, afterSuccess, forcedAction){
   const isCheckedOut = currentChk==='CHECK-OUT';
-  const nextAction = isCheckedOut ? 'CHECK-IN' : 'CHECK-OUT';
-  const actionLabel = isCheckedOut ? 'Check-In' : 'Check-Out';
+  const nextAction = forcedAction || (isCheckedOut ? 'CHECK-IN' : 'CHECK-OUT');
+  const isInstall = nextAction==='INSTALLED';
+  const actionLabel = isInstall ? 'Declare as Installed' : (nextAction==='CHECK-IN' ? 'Check-In' : 'Check-Out');
   askPrompt({
-    title: actionLabel + ' Part (' + bc + ')',
-    msg: isCheckedOut
-      ? 'Konfirmasi pengembalian (Check-In) part ini ke penyimpanan.'
-      : 'Konfirmasi pengeluaran (Check-Out) part ini dari penyimpanan.',
+    title: actionLabel + ' (' + bc + ')',
+    msg: isInstall
+      ? 'Konfirmasi bahwa part ini telah terpasang (INSTALLED) pada pesawat. Item akan hilang dari daftar Check-Out & Check-In.'
+      : (nextAction==='CHECK-IN'
+          ? 'Konfirmasi pengembalian (Check-In) part ini ke penyimpanan.'
+          : 'Konfirmasi pengeluaran (Check-Out) part ini dari penyimpanan.'),
     label: 'Reason ' + actionLabel,
-    placeholder: isCheckedOut
-      ? 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE RACK'
-      : 'Contoh: DIPINJAM UNTUK PENGERJAAN DI HANGAR 4',
+    placeholder: isInstall
+      ? 'Contoh: INSTALLED ON PK-GIE / WO 80012345'
+      : (nextAction==='CHECK-IN'
+          ? 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE RACK'
+          : 'Contoh: DIPINJAM UNTUK PENGERJAAN DI HANGAR 4'),
     okText: 'Simpan ' + actionLabel
   }).then(reason=>{
     if(!reason)return;
     run(async()=>{
       await api('checkinout',{bc,action:nextAction,reason});
       await load();
-      toast('Status ' + actionLabel + ' berhasil disimpan');
+      toast('Status ' + (isInstall?'INSTALLED':actionLabel) + ' berhasil disimpan');
       if(typeof afterSuccess==='function')afterSuccess();
     });
   });
@@ -2021,6 +2037,7 @@ function detail(bc, cioModeOnly=false){
   const p=cachedPart;
   const isPic=canWrite();
   const isCheckedOut=p.chk==='CHECK-OUT';
+  const isInstalled=p.chk==='INSTALLED';
   const nextCioLabel=isCheckedOut?'Check-In':'Check-Out';
   const thumbPhoto=p.photo && p.photo.includes('lh3.googleusercontent.com/d/') && !p.photo.includes('=')
     ? p.photo+'=w800'
@@ -2030,7 +2047,7 @@ function detail(bc, cioModeOnly=false){
     <h3>${esc(p.bc)}</h3>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
       <span class="badge ${p.status==='Serviceable'?'ok':''}">${p.status==='Serviceable'?'Serviceable':'Un-Serviceable'}</span>
-      ${p.chk?`<span class="badge ${isCheckedOut?'chk-out':'chk-in'}">${esc(p.chk)}</span>`:'<span class="badge del">BELUM CHECK-IN/OUT</span>'}
+      ${p.chk?`<span class="badge ${isCheckedOut?'chk-out':(isInstalled?'chk-inst':'chk-in')}">${esc(p.chk)}</span>`:'<span class="badge del">BELUM CHECK-IN/OUT</span>'}
       ${!isPic?'<span class="badge del">VIEW ONLY</span>':''}
     </div>
     ${p.photo?`<div class="detail-photo" id="zoomPhoto"><img src="${esc(thumbPhoto)}" loading="lazy" alt="Foto Part ${esc(p.bc)}"></div>`:''}
@@ -2044,9 +2061,20 @@ function detail(bc, cioModeOnly=false){
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
           Status Check-In/Out Saat Ini: <b style="color:var(--navy)">${esc(p.chk||'BELUM PERNAH CHECK-IN/OUT')}</b>
         </div>
-        <button type="button" class="${isCheckedOut?'ex':'p'}" id="btnCioAction" style="width:100%">
-          ${isCheckedOut?ICO.chkIn:ICO.chkOut}<span>${nextCioLabel} Part Ini</span>
-        </button>
+        ${isInstalled ? '' : (isCheckedOut ? `
+          <div class="row" style="margin-bottom:0">
+            <button type="button" class="ex" id="btnCioAction" style="flex:1">
+              ${ICO.chkIn}<span>Check-In</span>
+            </button>
+            <button type="button" class="p" id="btnInstAction" style="flex:1;padding:10px 14px">
+              ${ICO.check}<span>Declare as Installed</span>
+            </button>
+          </div>
+        ` : `
+          <button type="button" class="p" id="btnCioAction" style="width:100%">
+            ${ICO.chkOut}<span>${nextCioLabel} Part Ini</span>
+          </button>
+        `)}
       </div>
     ` : `
       <h4 style="margin-top:12px">Update lokasi / status</h4>
@@ -2086,16 +2114,18 @@ function detail(bc, cioModeOnly=false){
 
   if($('#zoomPhoto'))$('#zoomPhoto').onclick=()=>window.open(p.photo,'_blank');
 
+  const onCioDone=()=>{
+    closeM();
+    if(view==='list'){detail(bc,false);listView();}
+    else if(view==='co')checkOutView();
+    else if(view==='ci')checkInView();
+    else detail(bc, cioModeOnly);
+  };
   if($('#btnCioAction')){
-    $('#btnCioAction').onclick=()=>{
-      triggerCheckInOutAction(bc, p.chk, ()=>{
-        closeM();
-        if(view==='list'){detail(bc,false);listView();}
-        else if(view==='co')checkOutView();
-        else if(view==='ci')checkInView();
-        else detail(bc, cioModeOnly);
-      });
-    };
+    $('#btnCioAction').onclick=()=>triggerCheckInOutAction(bc, p.chk, onCioDone);
+  }
+  if($('#btnInstAction')){
+    $('#btnInstAction').onclick=()=>triggerCheckInOutAction(bc, p.chk, onCioDone, 'INSTALLED');
   }
 
   if(isPic && !cioModeOnly){
@@ -2163,13 +2193,16 @@ function triggerBatchCheckInOut(action, selectedSet, onDone){
     return;
   }
   const isOut=action==='CHECK-OUT';
-  const label=isOut?'Check-Out':'Check-In';
+  const isInst=action==='INSTALLED';
+  const label=isOut?'Check-Out':(isInst?'Declare as Installed':'Check-In');
   const items=bcs.map(bc=>parts.find(p=>p.bc===bc)||{bc,pn:'-',sn:'-',desc:'-'});
 
   modal(`
     <h3 style="margin-bottom:6px">Konfirmasi ${label} Massal (${items.length} Item)</h3>
     <p style="font-size:13px;color:#334155;margin:0 0 10px">
-      Apakah Anda yakin ingin melakukan <b>${label}</b> pada <b>${items.length} item</b> berikut?
+      ${isInst
+        ? `Apakah Anda yakin ingin mengubah status <b>${items.length} item</b> berikut menjadi <b>INSTALLED</b>? Item akan hilang dari daftar Check-Out &amp; Check-In.`
+        : `Apakah Anda yakin ingin melakukan <b>${label}</b> pada <b>${items.length} item</b> berikut?`}
     </p>
     <div class="batch-preview-wrap">
       <table class="batch-preview-tbl">
@@ -2197,12 +2230,14 @@ function triggerBatchCheckInOut(action, selectedSet, onDone){
     <label>Reason ${label} <span style="color:var(--red)">*</span>
       <input id="batchReasonInp" type="text" placeholder="${isOut
         ? 'Contoh: DIKELUARKAN UNTUK PENGERJAAN DI HANGAR 1'
-        : 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE H1-RAK 1'}">
+        : (isInst
+            ? 'Contoh: INSTALLED ON PK-GIE / WO 80012345'
+            : 'Contoh: SELESAI PENGERJAAN / DIKEMBALIKAN KE H1-RAK 1')}">
     </label>
     <div class="row" style="margin-top:14px;margin-bottom:0">
       <button type="button" class="s" id="batchCancelBtn" style="flex:1">Batal</button>
-      <button type="button" class="${isOut?'p':'ex'}" id="batchConfirmBtn" style="flex:1;padding:10px 14px;font-weight:700">
-        ${isOut?ICO.chkOut:ICO.chkIn}<span>Ya, ${label} (${items.length})</span>
+      <button type="button" class="${(isOut||isInst)?'p':'ex'}" id="batchConfirmBtn" style="flex:1;padding:10px 14px;font-weight:700">
+        ${isOut?ICO.chkOut:(isInst?ICO.check:ICO.chkIn)}<span>Ya, ${label} (${items.length})</span>
       </button>
     </div>
   `);
@@ -2220,7 +2255,7 @@ function triggerBatchCheckInOut(action, selectedSet, onDone){
       const res=await api('checkinout_batch',{action,bcs,reason});
       await load();
       closeM();
-      toast((res.count||items.length) + ' part berhasil di-' + label);
+      toast((res.count||items.length) + ' part berhasil diproses ' + (isInst?'INSTALLED':label));
       if(typeof onDone==='function')onDone();
     });
   };
@@ -2279,7 +2314,7 @@ function checkOutView(){
     coStatus=$('#fsCo').value;
     const q=coQuery.toLowerCase(),f=coStatus;
     return parts.filter(p=>
-      p.chk!=='CHECK-OUT' &&
+      p.chk!=='CHECK-OUT' && p.chk!=='INSTALLED' &&
       (!f || (f==='AVAIL' ? !p.chk : p.chk==='CHECK-IN')) &&
       (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
     );
@@ -2482,7 +2517,7 @@ function checkOutView(){
   };
   $('#scCo').onclick=()=>scan(c=>{
     const code=c.toUpperCase();
-    const matched=parts.find(p=>p.bc===code && p.chk!=='CHECK-OUT');
+    const matched=parts.find(p=>p.bc===code && p.chk!=='CHECK-OUT' && p.chk!=='INSTALLED');
     if(matched){
       if(isPic){
         selected.add(code);
@@ -2493,6 +2528,8 @@ function checkOutView(){
       }else{
         detail(code, true);
       }
+    }else if(parts.some(p=>p.bc===code && p.chk==='INSTALLED')){
+      toast('Part '+code+' sudah berstatus INSTALLED.');
     }else if(parts.some(p=>p.bc===code && p.chk==='CHECK-OUT')){
       toast('Part '+code+' sedang berstatus CHECK-OUT.');
     }else{
@@ -2529,9 +2566,14 @@ function checkInView(){
             <input type="checkbox" id="ciSelAll" class="sel-chk">
             <span id="ciSelAllLbl">Select All (0)</span>
           </label>
-          <button type="button" class="ex" id="btnBatchCi" disabled style="width:auto;padding:8px 14px;font-size:12.5px;font-weight:700">
-            ${ICO.chkIn}<span id="btnBatchCiTxt">Check-In Terpilih (0)</span>
-          </button>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto">
+            <button type="button" class="ex" id="btnBatchCi" disabled style="width:auto;padding:8px 12px;font-size:12px;font-weight:700">
+              ${ICO.chkIn}<span id="btnBatchCiTxt">Check-In (0)</span>
+            </button>
+            <button type="button" class="p" id="btnBatchInst" disabled style="width:auto;padding:8px 12px;font-size:12px;font-weight:700">
+              ${ICO.check}<span id="btnBatchInstTxt">Declare as Installed (0)</span>
+            </button>
+          </div>
         </div>
       `:''}
     </div>
@@ -2564,7 +2606,11 @@ function checkInView(){
 
     const btn=$('#btnBatchCi');
     btn.disabled=selected.size===0;
-    $('#btnBatchCiTxt').textContent=`Check-In Terpilih (${selected.size})`;
+    $('#btnBatchCiTxt').textContent=`Check-In (${selected.size})`;
+
+    const btnInst=$('#btnBatchInst');
+    btnInst.disabled=selected.size===0;
+    $('#btnBatchInstTxt').textContent=`Declare as Installed (${selected.size})`;
   };
 
   const drawCi=()=>{
@@ -2718,6 +2764,12 @@ function checkInView(){
     $('#ciSelAll').onclick=handleCiSelAll;
     $('#btnBatchCi').onclick=()=>{
       triggerBatchCheckInOut('CHECK-IN', selected, ()=>{
+        selected.clear();
+        drawCi();
+      });
+    };
+    $('#btnBatchInst').onclick=()=>{
+      triggerBatchCheckInOut('INSTALLED', selected, ()=>{
         selected.clear();
         drawCi();
       });
@@ -2892,10 +2944,59 @@ function scan(cb){
     .catch(()=>{$('#rd').innerHTML='<p style="color:#fff;padding:14px">Kamera tidak bisa dibuka. Izinkan akses kamera di browser, dan pastikan halaman dibuka lewat HTTPS. Anda tetap bisa mengetik kode manual.</p>'});
 }
 
+function parsePartDate(raw){
+  const s=String(raw||'').trim();
+  if(!s)return null;
+  let y,m,d;
+  let match=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if(match){
+    y=+match[1];m=+match[2]-1;d=+match[3];
+  }else{
+    match=s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+    if(!match)return null;
+    d=+match[1];m=+match[2]-1;y=+match[3];
+  }
+  const dt=new Date(y,m,d);
+  if(isNaN(dt.getTime()) || dt.getFullYear()!==y || dt.getMonth()!==m || dt.getDate()!==d)return null;
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+
+function getRemovedAgeDays(rdate){
+  const dt=parsePartDate(rdate);
+  if(!dt)return null;
+  const today=new Date();
+  today.setHours(0,0,0,0);
+  return Math.floor((today.getTime()-dt.getTime())/86400000);
+}
+
 function sumView(){
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
 
   app.innerHTML=`
+    <div class="sub-tabs" role="tablist">
+      <button type="button" id="tabSumOverview" class="${sumSub==='overview'?'active':''}">${ICO.chart}<span>Ringkasan Umum</span></button>
+      <button type="button" id="tabSumOver7" class="${sumSub==='over7'?'active':''}">${ICO.list}<span>Removal &gt; 7 Hari</span></button>
+    </div>
+    <div id="sumWrap"></div>`;
+
+  $('#tabSumOverview').onclick=()=>{
+    if(sumSub==='overview')return;
+    sumSub='overview';
+    sumView();
+  };
+  $('#tabSumOver7').onclick=()=>{
+    if(sumSub==='over7')return;
+    sumSub='over7';
+    sumView();
+  };
+
+  if(sumSub==='over7'){
+    renderOver7View();
+    return;
+  }
+
+  $('#sumWrap').innerHTML=`
     <div class="card" style="padding:12px 14px">
       <div class="row" style="margin-bottom:0">
         <select id="sumSt">
@@ -2917,6 +3018,14 @@ function sumView(){
     const serv=filtered.filter(p=>isOk(p.status)).length;
     const unserv=total-serv;
     const pctServ=total?Math.round((serv/total)*100):0;
+
+    const over7List=filtered.filter(p=>{
+      const age=getRemovedAgeDays(p.rdate);
+      return age!==null && age>7;
+    });
+    const over7Count=over7List.length;
+    const over7Svc=over7List.filter(p=>isOk(p.status)).length;
+    const over7Unsvc=over7Count-over7Svc;
 
     const groupBy=(fn)=>{
       const map=new Map();
@@ -2955,7 +3064,7 @@ function sumView(){
     const byDisc=groupBy(p=>String(p.disc||'').trim().toUpperCase()||'TANPA DISCREPANCY');
 
     $('#sumBody').innerHTML=`
-      <div class="kpi-grid">
+      <div class="kpi-grid kpi-4">
         <div class="kpi-card">
           <div class="kpi-lbl">Total Part</div>
           <div class="kpi-val">${total}</div>
@@ -2971,6 +3080,11 @@ function sumView(){
           <div class="kpi-val">${unserv}</div>
           <div class="kpi-sub">${total?100-pctServ:0}% dari total</div>
         </div>
+        <div class="kpi-card warn" id="kpiOver7Card" style="cursor:pointer" title="Klik untuk melihat daftar part Removal > 7 hari">
+          <div class="kpi-lbl" title="Date Removed/Inspected > 7 Hari">Removal &gt; 7 Hari</div>
+          <div class="kpi-val">${over7Count}</div>
+          <div class="kpi-sub">${over7Svc} SVC | ${over7Unsvc} UNSVC &bull; Lihat &rsaquo;</div>
+        </div>
       </div>
       <div class="card">
         <h4><span>Ringkasan per Current Location</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
@@ -2984,6 +3098,12 @@ function sumView(){
         <h4><span>Ringkasan per Discrepancy (8)</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik untuk rincian</span></h4>
         ${renderGroup(byDisc,'disc')}
       </div>`;
+
+    $('#kpiOver7Card').onclick=()=>{
+      over7Status=stFilter||'';
+      sumSub='over7';
+      sumView();
+    };
   };
 
   const openDiscDetailModal=(discName)=>{
@@ -3102,6 +3222,239 @@ function sumView(){
     listStatus=stFilter||'';
     listQuery=(val!=='TIDAK DIKETAHUI')?val:'';
     go('list');
+  };
+}
+
+function renderOver7View(){
+  const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
+  const baseOver7=parts
+    .map(p=>({...p,_age:getRemovedAgeDays(p.rdate)}))
+    .filter(p=>p._age!==null && p._age>7)
+    .sort((a,b)=>b._age-a._age);
+
+  const acOpts=Array.from(new Set(baseOver7.map(p=>String(p.ac||'').trim().toUpperCase()).filter(Boolean))).sort();
+  const locOpts=Array.from(new Set(baseOver7.map(p=>String(p.loc||'').trim().toUpperCase()).filter(Boolean))).sort();
+
+  if(over7Ac && !acOpts.includes(over7Ac))over7Ac='';
+  if(over7Loc && !locOpts.includes(over7Loc))over7Loc='';
+
+  $('#sumWrap').innerHTML=`
+    <div class="card">
+      <div class="row">
+        <input id="qOver7" placeholder="CARI BARCODE / PN / SN / DESC / A/C / LOKASI" type="search" value="${esc(over7Query)}">
+        <button class="s" id="rfOver7" type="button">${ICO.refresh}<span>Muat ulang</span></button>
+      </div>
+      <div class="row" style="flex-wrap:wrap">
+        <select id="fsOver7St">
+          <option value="" ${over7Status===''?'selected':''}>Semua Status</option>
+          <option value="Serviceable" ${over7Status==='Serviceable'?'selected':''}>Serviceable</option>
+          <option value="Unserviceable" ${over7Status==='Unserviceable'?'selected':''}>Un-Serviceable</option>
+        </select>
+        <select id="fsOver7Ac">
+          <option value="" ${over7Ac===''?'selected':''}>Semua A/C Reg</option>
+          ${acOpts.map(a=>`<option value="${esc(a)}" ${over7Ac===a?'selected':''}>${esc(a)}</option>`).join('')}
+        </select>
+        <select id="fsOver7Loc">
+          <option value="" ${over7Loc===''?'selected':''}>Semua Lokasi</option>
+          ${locOpts.map(l=>`<option value="${esc(l)}" ${over7Loc===l?'selected':''}>${esc(l)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="list-meta" style="gap:6px">
+        <small id="cntOver7" style="white-space:nowrap"></small>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <div class="view-toggle" role="group" aria-label="Mode Tampilan Aging">
+            <button type="button" id="over7Cards" class="${over7Mode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
+            <button type="button" id="over7Table" class="${over7Mode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
+          </div>
+          <button type="button" class="ex" id="btnExportOver7" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
+            ${ICO.download}<span>Export</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="over7Ls"></div>`;
+
+  let over7Page=1;
+  const getFiltered=()=>{
+    over7Query=$('#qOver7').value;
+    over7Status=$('#fsOver7St').value;
+    over7Ac=$('#fsOver7Ac').value;
+    over7Loc=$('#fsOver7Loc').value;
+    const q=over7Query.toLowerCase();
+    return baseOver7.filter(p=>
+      (!over7Status || isOk(p.status)===isOk(over7Status)) &&
+      (!over7Ac || String(p.ac||'').trim().toUpperCase()===over7Ac) &&
+      (!over7Loc || String(p.loc||'').trim().toUpperCase()===over7Loc) &&
+      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.rdate].join(' ').toLowerCase().includes(q))
+    );
+  };
+
+  const drawOver7=()=>{
+    const r=getFiltered();
+    const total=r.length;
+    const totalPages=Math.max(1,Math.ceil(total/pageSize));
+    if(over7Page>totalPages)over7Page=totalPages;
+    const startIdx=(over7Page-1)*pageSize;
+    const paged=r.slice(startIdx,startIdx+pageSize);
+
+    $('#cntOver7').textContent=total
+      ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part (> 7 hari)`
+      : '0 part (> 7 hari)';
+
+    const box=$('#over7Ls');
+    if(!total){
+      box.classList.remove('cards-grid');
+      box.innerHTML='<div class="card ctr">Tidak ada part dengan Date Removed/Inspected &gt; 7 hari yang sesuai filter.</div>';
+      return;
+    }
+
+    const pgHtml=`
+      <div class="pg-bar">
+        <div class="pg-size">
+          <span>Tampilkan</span>
+          <select id="over7PgSel">
+            ${[20,50,100].map(n=>`<option value="${n}" ${pageSize===n?'selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pg-ctrl">
+          <button type="button" class="s" id="over7PgPrev" ${over7Page<=1?'disabled':''}>&lsaquo; Prev</button>
+          <span class="pg-info">Hal ${over7Page} / ${totalPages}</span>
+          <button type="button" class="s" id="over7PgNext" ${over7Page>=totalPages?'disabled':''}>Next &rsaquo;</button>
+        </div>
+      </div>`;
+
+    box.classList.toggle('cards-grid', over7Mode==='cards');
+    if(over7Mode==='table'){
+      box.innerHTML=`
+        <div class="tbl-wrap">
+          <table class="part-tbl">
+            <thead>
+              <tr>
+                <th>Barcode</th>
+                <th>A/C Reg</th>
+                <th>Description</th>
+                <th>Part Number</th>
+                <th>Serial Number</th>
+                <th>Lokasi</th>
+                <th>Removed Date (11)</th>
+                <th>Durasi</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paged.map(p=>`
+                <tr class="row-item ${isOk(p.status)?'row-ok':'row-un'}" data-bc="${esc(p.bc)}">
+                  <td><b>${esc(p.bc)}</b></td>
+                  <td>${esc(p.ac)||'-'}</td>
+                  <td>${esc(p.desc)||'-'}</td>
+                  <td>${esc(p.pn)||'-'}</td>
+                  <td>${esc(p.sn)||'-'}</td>
+                  <td>${esc(p.loc)||'-'}</td>
+                  <td style="white-space:nowrap">${esc(p.rdate)||'-'}</td>
+                  <td><span class="age-pill">${p._age} Hari</span></td>
+                  <td>
+                    <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+                    ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>${pgHtml}`;
+    }else{
+      box.innerHTML=paged.map(p=>`
+        <div class="item ${isOk(p.status)?'ok':''}" data-bc="${esc(p.bc)}">
+          <div class=row>
+            <b>${esc(p.bc)}</b>
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+              <span class="age-pill">${p._age} Hari</span>
+              ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}">${esc(p.chk)}</span>`:''}
+              <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+            </div>
+          </div>
+          <div>${esc(p.desc)||'-'}</div>
+          <small>
+            <span>A/C: ${esc(p.ac)||'-'} | PN ${esc(p.pn)||'-'} | Lokasi: ${esc(p.loc)||'-'} | Removed: ${esc(p.rdate)||'-'}</span>
+            ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
+          </small>
+        </div>`).join('')+pgHtml;
+    }
+
+    $('#over7PgSel').onchange=e=>{
+      pageSize=+e.target.value;
+      localStorage.setItem('pageSize',String(pageSize));
+      over7Page=1;
+      drawOver7();
+    };
+    $('#over7PgPrev').onclick=()=>{if(over7Page>1){over7Page--;drawOver7();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#over7PgNext').onclick=()=>{if(over7Page<totalPages){over7Page++;drawOver7();window.scrollTo({top:0,behavior:'smooth'})}};
+  };
+
+  drawOver7();
+  let searchTimer=null;
+  $('#qOver7').oninput=()=>{
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{over7Page=1;drawOver7()},120);
+  };
+  $('#fsOver7St').onchange=()=>{over7Page=1;drawOver7()};
+  $('#fsOver7Ac').onchange=()=>{over7Page=1;drawOver7()};
+  $('#fsOver7Loc').onchange=()=>{over7Page=1;drawOver7()};
+
+  $('#over7Cards').onclick=()=>{
+    over7Mode='cards';localStorage.setItem('over7Mode','cards');
+    $('#over7Cards').classList.add('active');$('#over7Table').classList.remove('active');
+    drawOver7();
+  };
+  $('#over7Table').onclick=()=>{
+    over7Mode='table';localStorage.setItem('over7Mode','table');
+    $('#over7Table').classList.add('active');$('#over7Cards').classList.remove('active');
+    drawOver7();
+  };
+  $('#rfOver7').onclick=()=>run(async()=>{await load();renderOver7View();toast('Data diperbarui')});
+  $('#over7Ls').onclick=e=>{
+    const target=e.target.closest('.item, .row-item');
+    if(target)detail(target.dataset.bc);
+  };
+
+  $('#btnExportOver7').onclick=()=>{
+    const filtered=getFiltered();
+    if(!filtered.length){
+      toast('Tidak ada data Removal > 7 hari yang sesuai filter untuk diexport');
+      return;
+    }
+    const labelParts=[
+      'REMOVAL > 7 HARI',
+      over7Status ? (isOk(over7Status)?'SERVICEABLE':'UN-SERVICEABLE') : '',
+      over7Ac,
+      over7Loc,
+      over7Query.trim()
+    ].filter(Boolean);
+    const filterLabel=labelParts.join(' - ').toUpperCase();
+
+    modal(`
+      <h3>Export Part Removal &gt; 7 Hari</h3>
+      <p style="font-size:13px;color:var(--muted);margin-top:-4px">
+        Mengekspor <b>${filtered.length} part</b> sesuai filter aktif (<b>${esc(filterLabel)}</b>) dalam layout Landscape A4.
+      </p>
+      <label>Pilih Format Dokumen
+        <div class="fmt-grid">
+          <button type="button" class="ex" id="btnExpOver7Xlsx">${ICO.fileSheet}<span>Excel (.xlsx)</span></button>
+          <button type="button" class="p" id="btnExpOver7Pdf">${ICO.filePdf}<span>PDF (.pdf)</span></button>
+        </div>
+      </label>
+    `);
+    const triggerOver7Export=fmt=>run(async()=>{
+      const res=await api('export',{
+        loc:'SELECTED',
+        fmt,
+        bcs:filtered.map(p=>p.bc),
+        label:filterLabel
+      });
+      downloadBase64File(res.base64,res.fileName,res.mimeType);
+      closeM();
+      toast('File '+res.fileName+' berhasil diunduh');
+    });
+    $('#btnExpOver7Xlsx').onclick=()=>triggerOver7Export('xlsx');
+    $('#btnExpOver7Pdf').onclick=()=>triggerOver7Export('pdf');
   };
 }
 
