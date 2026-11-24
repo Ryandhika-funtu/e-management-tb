@@ -864,6 +864,14 @@ a:hover{text-decoration:underline}
   border:1px solid var(--border-strong);border-radius:11px;
   background:#f8fafc;box-shadow:var(--shadow-sm);
 }
+.u.u-pending{
+  background:#fef2f2;
+  border-color:#fca5a5;
+  border-left:4px solid var(--red);
+}
+.u.u-pending .u-name{
+  color:var(--red-text);
+}
 .u:last-child{margin-bottom:0}
 .u-info{flex:1 1 200px;min-width:0}
 .u-name{font-weight:700;font-size:14px;color:var(--navy);line-height:1.35;word-break:break-word;overflow-wrap:anywhere}
@@ -3807,12 +3815,23 @@ async function admView(){
     $('#admBody').innerHTML='<div class=card id=ul>Memuat pengguna...</div>';
     await run(async()=>{
       const us=await api('users');
-      const L={active:'Aktif',pending:'Menunggu',off:'Nonaktif'};
+      const rankUser=u=>{
+        if(String(u.nip)==='583453')return 0;
+        if(u.st==='pending')return 1;
+        if(u.st==='active')return 2;
+        return 3;
+      };
+      us.sort((a,b)=>{
+        const ra=rankUser(a),rb=rankUser(b);
+        if(ra!==rb)return ra-rb;
+        return String(a.n||'').localeCompare(String(b.n||''));
+      });
+      const L={active:'Aktif',pending:'Menunggu ACC',off:'Nonaktif'};
       const R={admin:'Admin',pic:'PIC','pic-h1':'PIC-H1','pic-h3':'PIC-H3',user:'User'};
       const roleCls=r=>({admin:'role-admin','pic-h1':'role-pic-h1','pic-h3':'role-pic-h3',pic:'role-pic',user:'role-user'}[r]||'role-user');
-      const stColor=st=>st==='active'?'#15803d':(st==='pending'?'#b45309':'#b91c1c');
+      const stColor=st=>st==='active'?'#15803d':(st==='pending'?'#b91c1c':'#64748b');
       $('#ul').innerHTML='<h3>Kelola pengguna ('+us.length+')</h3>'+us.map(u=>`
-        <div class="u">
+        <div class="u ${u.st==='pending'?'u-pending':''}">
           <div class="u-info">
             <div class="u-name">${esc(u.n)}</div>
             <div class="u-meta">
