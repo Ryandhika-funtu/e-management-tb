@@ -1066,7 +1066,7 @@ async function api(a,d){
   return j.d;
 }
 
-async function run(fn){$('#bz').classList.add('on');try{return await fn()}catch(e){toast(e.message)}finally{$('#bz').classList.remove('on')}}
+async function run(fn){$('#bz').classList.add('on');try{return await fn()}catch(e){toast(e.message,'error',4800)}finally{$('#bz').classList.remove('on')}}
 const saveLocalCache=()=>{
   try{
     localStorage.setItem('cache_parts',JSON.stringify(parts));
