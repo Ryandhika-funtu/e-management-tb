@@ -639,6 +639,29 @@ button.ex:hover{background:#d1fae5}
 .batch-preview-tbl tr:last-child td{border-bottom:none}
 .batch-preview-tbl tr:nth-child(even) td{background:#f8fafc}
 
+/* Floating Save Bar di atas Bottom Nav (Menu Input) */
+.float-save-bar{
+  position:fixed;
+  left:0;right:0;
+  bottom:calc(62px + env(safe-area-inset-bottom));
+  z-index:9;
+  padding:8px 16px;
+  background:rgba(241,245,249,.94);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border-top:1px solid var(--border);
+  box-shadow:0 -3px 10px rgba(15,23,42,.06);
+  display:flex;
+  justify-content:center;
+}
+.float-save-bar button.p{
+  max-width:788px;
+  margin:0;
+}
+main.has-float-save{
+  padding-bottom:76px;
+}
+
 /* Bottom Navigation */
 nav{
   position:fixed;bottom:0;left:0;right:0;
@@ -1078,6 +1101,7 @@ function go(v,p){
   }
   view=v;
   app.classList.toggle('narrow-view', v==='in' || (v==='adm' && admSub==='users'));
+  app.classList.toggle('has-float-save', v==='in');
   nav();
   ({in:()=>inView(p),list:listView,co:checkOutView,ci:checkInView,sum:sumView,adm:admView})[v]();
   requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
@@ -1364,7 +1388,7 @@ function inView(p){
       const isOptSec=optSections.includes(t);
       return `<div class=card><h4><span>${t}</span>${isOptSec?'<span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Opsional</span>':'<span class="req-badge">Wajib</span>'}</h4>${fs.map(f=>field(f,v[f[0]],!isOptSec && f[0]!=='sn')).join('')}</div>`;
     }).join('')
-    +`<button class=p id=sv>Simpan Data</button>`;
+    +`<div class="float-save-bar"><button class=p id=sv>Simpan Data</button></div>`;
 
   renderPhotoWidget(false);
   $('#f_loc_add').onclick=()=>promptAddLocation($('#f_loc'));
