@@ -985,8 +985,18 @@ const S=[
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Chk=[],over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
-const canWrite=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
+const canWrite=()=>Boolean(me && ['pic','pic-h1','pic-h3','admin'].includes(me.r));
 const canCheckInOut=canWrite;
+const getPicLocPrefix=()=>me && me.r==='pic-h1' ? 'H1-' : (me && me.r==='pic-h3' ? 'H3-' : '');
+const formatPicLoc=raw=>{
+  const clean=String(raw||'').trim().toUpperCase();
+  if(!clean)return '';
+  const pfx=getPicLocPrefix();
+  if(pfx && !clean.startsWith(pfx)){
+    return pfx+clean.replace(/^H[13]-/i,'');
+  }
+  return clean;
+};
 
 function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
 
@@ -1018,11 +1028,14 @@ const saveLocalCache=()=>{
 };
 const load=async()=>{
   const res=await api('list');
+  const pfx=getPicLocPrefix();
   if(Array.isArray(res)){
-    parts=res;
+    parts=pfx?res.filter(p=>String(p.loc||'').trim().toUpperCase().startsWith(pfx)):res;
   }else{
-    parts=res.parts||[];
-    locations=res.locations||[];
+    const rawParts=res.parts||[];
+    const rawLocs=res.locations||[];
+    parts=pfx?rawParts.filter(p=>String(p.loc||'').trim().toUpperCase().startsWith(pfx)):rawParts;
+    locations=pfx?rawLocs.filter(l=>String(l||'').trim().toUpperCase().startsWith(pfx)):rawLocs;
     owners=res.owners||[];
   }
   saveLocalCache();
@@ -1238,10 +1251,12 @@ function renderPhotoWidget(highlightMissing){
 }
 
 function getAllLocations(){
-  return Array.from(new Set([
+  const pfx=getPicLocPrefix();
+  const merged=Array.from(new Set([
     ...locations,
     ...parts.map(p=>String(p.loc||'').trim().toUpperCase()).filter(Boolean)
   ])).sort();
+  return pfx?merged.filter(l=>l.startsWith(pfx)):merged;
 }
 
 function buildLocationOptions(selectedVal){
@@ -1256,6 +1271,7 @@ function promptAddLocation(selectEl){
   const oldSub=$('#subMd');
   if(oldSub)oldSub.remove();
 
+  const pfx=getPicLocPrefix();
   const overlay=document.createElement('div');
   overlay.id='subMd';
   overlay.innerHTML=`
@@ -1265,10 +1281,12 @@ function promptAddLocation(selectEl){
         <button type="button" class="s" id="subClose" aria-label="Tutup" style="width:30px;height:30px;padding:0;border-radius:50%">${ICO.close}</button>
       </div>
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px">
-        Lokasi baru akan otomatis tersimpan ke database dan langsung terpilih pada daftar.
+        ${pfx
+          ? `Lokasi baru akan otomatis disimpan dengan awalan <b>${esc(pfx)}</b> (misal: <b>RACK 10</b> &rarr; <b>${esc(pfx)}RACK 10</b>).`
+          : 'Lokasi baru akan otomatis tersimpan ke database dan langsung terpilih pada daftar.'}
       </p>
-      <label>Nama Lokasi Baru <span style="color:var(--red)">*</span>
-        <input id="subLocInp" type="text" placeholder="Contoh: HANGAR 4 / HOLDING TB / RACK A1" autocomplete="off">
+      <label>Nama Lokasi Baru ${pfx?`<span style="color:var(--blue);font-weight:700">(${esc(pfx)}...)</span>`:''} <span style="color:var(--red)">*</span>
+        <input id="subLocInp" type="text" placeholder="${pfx?'Contoh: RACK 10':'Contoh: HANGAR 4 / HOLDING TB / RACK A1'}" autocomplete="off">
       </label>
       <div class="row" style="margin-top:14px;margin-bottom:0">
         <button type="button" class="s" id="subCancel" style="flex:1">Batal</button>
@@ -1285,14 +1303,16 @@ function promptAddLocation(selectEl){
   $('#subCancel').onclick=closeSub;
 
   const submitLoc=()=>run(async()=>{
-    const cleanLoc=inp.value.trim().toUpperCase();
-    if(!cleanLoc){
+    const rawInp=inp.value.trim().toUpperCase();
+    if(!rawInp){
       inp.focus();
       throw new Error('Nama lokasi baru wajib diisi');
     }
+    const cleanLoc=formatPicLoc(rawInp);
     const updatedLocs=await api('add_loc',{loc:cleanLoc});
     if(Array.isArray(updatedLocs))locations=updatedLocs;
     else if(!locations.includes(cleanLoc))locations.push(cleanLoc);
+    saveLocalCache();
     if(selectEl){
       selectEl.innerHTML=buildLocationOptions(cleanLoc);
       selectEl.value=cleanLoc;
@@ -3764,7 +3784,7 @@ async function admView(){
     await run(async()=>{
       const us=await api('users');
       const L={active:'Aktif',pending:'Menunggu',off:'Nonaktif'};
-      const R={admin:'Admin',pic:'PIC',user:'User'};
+      const R={admin:'Admin',pic:'PIC','pic-h1':'PIC-H1','pic-h3':'PIC-H3',user:'User'};
       $('#ul').innerHTML='<h3>Kelola pengguna ('+us.length+')</h3>'+us.map(u=>`
         <div class=u>
           <div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${R[u.r]||u.r} | ${L[u.st]||u.st}</small></div>
@@ -3772,7 +3792,8 @@ async function admView(){
             ${u.nip!==me.nip?`
               <select class="role-sel" data-nip="${esc(u.nip)}" aria-label="Ubah Role" style="width:auto;margin:0;padding:5px 8px;font-size:12px;border-radius:7px">
                 <option value="user" ${u.r==='user'?'selected':''}>User</option>
-                <option value="pic" ${u.r==='pic'?'selected':''}>PIC</option>
+                <option value="pic-h1" ${u.r==='pic-h1'?'selected':''}>PIC-H1</option>
+                <option value="pic-h3" ${u.r==='pic-h3'?'selected':''}>PIC-H3</option>
                 <option value="admin" ${u.r==='admin'?'selected':''}>Admin</option>
               </select>
             `:''}
@@ -4028,6 +4049,11 @@ async function admView(){
 }
 
 if(me&&tok){
+  const initPfx=getPicLocPrefix();
+  if(initPfx){
+    parts=parts.filter(p=>String(p.loc||'').trim().toUpperCase().startsWith(initPfx));
+    locations=locations.filter(l=>String(l||'').trim().toUpperCase().startsWith(initPfx));
+  }
   hdr();
   nav();
   if(parts.length){
