@@ -1105,21 +1105,33 @@ async function api(a,d){
 }
 
 async function run(fn){$('#bz').classList.add('on');try{return await fn()}catch(e){toast(e.message,'error',4800)}finally{$('#bz').classList.remove('on')}}
+const buildAcOwnerMap=list=>{
+  const map={...acOwnerMap};
+  (list||[]).forEach(item=>{
+    const ac=String(item.ac||'').trim().toUpperCase();
+    const ow=String(item.owner||'').trim().toUpperCase();
+    if(ac && ow)map[ac]=ow;
+  });
+  return map;
+};
 const saveLocalCache=()=>{
   try{
     localStorage.setItem('cache_parts',JSON.stringify(parts));
     localStorage.setItem('cache_locs',JSON.stringify(locations));
     localStorage.setItem('cache_owners',JSON.stringify(owners));
+    localStorage.setItem('cache_ac_owners',JSON.stringify(acOwnerMap));
   }catch(e){}
 };
 const load=async()=>{
   const res=await api('list');
   const pfx=getPicLocPrefix();
   if(Array.isArray(res)){
+    acOwnerMap=buildAcOwnerMap(res);
     parts=pfx?res.filter(p=>String(p.loc||'').trim().toUpperCase().startsWith(pfx)):res;
   }else{
     const rawParts=res.parts||[];
     const rawLocs=res.locations||[];
+    acOwnerMap=buildAcOwnerMap(rawParts);
     parts=pfx?rawParts.filter(p=>String(p.loc||'').trim().toUpperCase().startsWith(pfx)):rawParts;
     locations=pfx?rawLocs.filter(l=>String(l||'').trim().toUpperCase().startsWith(pfx)):rawLocs;
     owners=res.owners||[];
@@ -1127,7 +1139,7 @@ const load=async()=>{
   saveLocalCache();
 };
 
-function logout(q){tok=null;me=null;parts=[];locations=[];owners=[];localStorage.removeItem('tok');localStorage.removeItem('me');localStorage.removeItem('cache_parts');localStorage.removeItem('cache_locs');localStorage.removeItem('cache_owners');hdr();nav();authView();if(q)toast('Sesi habis, silakan login ulang')}
+function logout(q){tok=null;me=null;parts=[];locations=[];owners=[];acOwnerMap={};localStorage.removeItem('tok');localStorage.removeItem('me');localStorage.removeItem('cache_parts');localStorage.removeItem('cache_locs');localStorage.removeItem('cache_owners');localStorage.removeItem('cache_ac_owners');hdr();nav();authView();if(q)toast('Sesi habis, silakan login ulang')}
 
 function hdr(){
   $('#who').textContent=me?me.n+' ('+me.nip+')':'';
@@ -1575,9 +1587,9 @@ function inView(p){
         }
         return false;
       }
-      const matched=parts.find(item=>String(item.ac||'').trim().toUpperCase()===acVal && String(item.owner||'').trim());
-      if(matched){
-        const matchedOwner=String(matched.owner).trim().toUpperCase();
+      const localMatch=parts.find(item=>String(item.ac||'').trim().toUpperCase()===acVal && String(item.owner||'').trim());
+      const matchedOwner=acOwnerMap[acVal] || (localMatch ? String(localMatch.owner).trim().toUpperCase() : '');
+      if(matchedOwner){
         ownerInput.innerHTML=buildOwnerOptions(matchedOwner);
         ownerInput.value=matchedOwner;
         ownerInput.dataset.autofilled='1';
