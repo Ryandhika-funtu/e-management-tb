@@ -409,6 +409,39 @@ button.ex:hover{background:#d1fae5}
 .loc-opt:hover,.loc-opt:active{background:var(--blue-soft);color:var(--navy)}
 .loc-opt.new-opt{color:var(--blue);font-weight:600;background:#f8fafc;border-top:1px dashed var(--border-strong);margin-top:2px}
 
+/* Multi-Select Filter Chips */
+.chip-group{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px;
+  width:100%;
+  margin-bottom:10px;
+}
+.chip-lbl{
+  font-size:11.5px;
+  font-weight:700;
+  color:var(--muted);
+  margin-right:2px;
+}
+.fchip{
+  padding:5px 11px;
+  font-size:12px;
+  font-weight:600;
+  border-radius:999px;
+  background:#f8fafc;
+  color:var(--muted);
+  border:1px solid var(--border-strong);
+  gap:5px;
+}
+.fchip:hover{background:#f1f5f9;color:var(--navy)}
+.fchip.on{
+  background:var(--navy);
+  color:#fff;
+  border-color:var(--navy);
+  box-shadow:0 1px 3px rgba(0,34,64,.2);
+}
+
 /* View Mode Switcher & Table Layout */
 .view-toggle{
   display:inline-flex;
@@ -951,7 +984,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Chk='',over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Chk=[],over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
 const canWrite=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
 const canCheckInOut=canWrite;
 
@@ -3282,7 +3315,7 @@ function sumView(){
 
     $('#kpiOver7Card').onclick=()=>{
       over7Status=stFilter||'';
-      over7Chk='';
+      over7Chk=[];
       sumSub='over7';
       sumView();
     };
@@ -3444,13 +3477,6 @@ function renderOver7View(){
           <option value="Serviceable" ${over7Status==='Serviceable'?'selected':''}>Serviceable</option>
           <option value="Unserviceable" ${over7Status==='Unserviceable'?'selected':''}>Un-Serviceable</option>
         </select>
-        <select id="fsOver7Chk">
-          <option value="" ${over7Chk===''?'selected':''}>Semua Check Status</option>
-          <option value="AVAIL" ${over7Chk==='AVAIL'?'selected':''}>Avail (Belum Check-In/Out)</option>
-          <option value="CHECK-IN" ${over7Chk==='CHECK-IN'?'selected':''}>Check-In</option>
-          <option value="CHECK-OUT" ${over7Chk==='CHECK-OUT'?'selected':''}>Check-Out</option>
-          <option value="INSTALLED" ${over7Chk==='INSTALLED'?'selected':''}>Installed</option>
-        </select>
         <select id="fsOver7Ac">
           <option value="" ${over7Ac===''?'selected':''}>Semua A/C Reg</option>
           ${acOpts.map(a=>`<option value="${esc(a)}" ${over7Ac===a?'selected':''}>${esc(a)}</option>`).join('')}
@@ -3459,6 +3485,19 @@ function renderOver7View(){
           <option value="" ${over7Loc===''?'selected':''}>Semua Lokasi</option>
           ${locOpts.map(l=>`<option value="${esc(l)}" ${over7Loc===l?'selected':''}>${esc(l)}</option>`).join('')}
         </select>
+      </div>
+      <div class="chip-group" id="fsOver7ChkGroup" role="group" aria-label="Filter Multi Check Status">
+        <span class="chip-lbl">Check Status:</span>
+        ${[
+          ['AVAIL','Avail'],
+          ['CHECK-IN','Check-In'],
+          ['CHECK-OUT','Check-Out'],
+          ['INSTALLED','Installed']
+        ].map(([val,lbl])=>`
+          <button type="button" class="fchip ${over7Chk.includes(val)?'on':''}" data-val="${val}">
+            ${over7Chk.includes(val)?ICO.check:''}<span>${lbl}</span>
+          </button>
+        `).join('')}
       </div>
       <div class="row">
         <button class="d" id="rstOver7" type="button" style="flex:1">${ICO.close}<span>Reset Filter</span></button>
@@ -3483,19 +3522,18 @@ function renderOver7View(){
   const getFiltered=()=>{
     over7Query=$('#qOver7').value;
     over7Status=$('#fsOver7St').value;
-    over7Chk=$('#fsOver7Chk').value;
     over7Ac=$('#fsOver7Ac').value;
     over7Loc=$('#fsOver7Loc').value;
     const q=over7Query.toLowerCase();
-    return baseOver7.filter(p=>
-      (!over7Status || isOk(p.status)===isOk(over7Status)) &&
-      (!over7Chk || (over7Chk==='AVAIL' ? !p.chk : p.chk===over7Chk)) &&
-      (!over7Ac || String(p.ac||'').trim().toUpperCase()===over7Ac) &&
-      (!over7Loc || String(p.loc||'').trim().toUpperCase()===over7Loc) &&
-      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.rdate].join(' ').toLowerCase().includes(q))
-    );
+    return baseOver7.filter(p=>{
+      const partChk=p.chk||'AVAIL';
+      return (!over7Status || isOk(p.status)===isOk(over7Status)) &&
+        (!over7Chk.length || over7Chk.includes(partChk)) &&
+        (!over7Ac || String(p.ac||'').trim().toUpperCase()===over7Ac) &&
+        (!over7Loc || String(p.loc||'').trim().toUpperCase()===over7Loc) &&
+        (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.rdate].join(' ').toLowerCase().includes(q));
+    });
   };
-
   const drawOver7=()=>{
     const r=getFiltered();
     const total=r.length;
@@ -3602,8 +3640,28 @@ function renderOver7View(){
     clearTimeout(searchTimer);
     searchTimer=setTimeout(()=>{over7Page=1;drawOver7()},120);
   };
+  const syncChkChips=()=>{
+    $('#fsOver7ChkGroup').querySelectorAll('.fchip').forEach(btn=>{
+      const val=btn.dataset.val;
+      const active=over7Chk.includes(val);
+      btn.classList.toggle('on', active);
+      const lbl=btn.querySelector('span').textContent;
+      btn.innerHTML=(active?ICO.check:'')+`<span>${esc(lbl)}</span>`;
+    });
+  };
+
+  $('#fsOver7ChkGroup').onclick=e=>{
+    const btn=e.target.closest('.fchip');
+    if(!btn)return;
+    const val=btn.dataset.val;
+    if(over7Chk.includes(val))over7Chk=over7Chk.filter(x=>x!==val);
+    else over7Chk.push(val);
+    syncChkChips();
+    over7Page=1;
+    drawOver7();
+  };
+
   $('#fsOver7St').onchange=()=>{over7Page=1;drawOver7()};
-  $('#fsOver7Chk').onchange=()=>{over7Page=1;drawOver7()};
   $('#fsOver7Ac').onchange=()=>{over7Page=1;drawOver7()};
   $('#fsOver7Loc').onchange=()=>{over7Page=1;drawOver7()};
 
@@ -3620,14 +3678,14 @@ function renderOver7View(){
   $('#rstOver7').onclick=()=>{
     over7Query='';
     over7Status='';
-    over7Chk='';
+    over7Chk=[];
     over7Ac='';
     over7Loc='';
     $('#qOver7').value='';
     $('#fsOver7St').value='';
-    $('#fsOver7Chk').value='';
     $('#fsOver7Ac').value='';
     $('#fsOver7Loc').value='';
+    syncChkChips();
     over7Page=1;
     drawOver7();
   };
@@ -3646,7 +3704,7 @@ function renderOver7View(){
     const labelParts=[
       'REMOVAL > 7 HARI',
       over7Status ? (isOk(over7Status)?'SERVICEABLE':'UN-SERVICEABLE') : '',
-      over7Chk,
+      over7Chk.length ? over7Chk.join('+') : '',
       over7Ac,
       over7Loc,
       over7Query.trim()
