@@ -674,7 +674,7 @@ button.ex:hover{background:#d1fae5}
 .batch-preview-tbl tr:last-child td{border-bottom:none}
 .batch-preview-tbl tr:nth-child(even) td{background:#f8fafc}
 
-/* Floating Save Bar di atas Bottom Nav (Menu Input) */
+/* Floating Save Bar & Persistent OCR Status di atas Bottom Nav (Menu Input) */
 .float-save-bar{
   position:fixed;
   left:0;right:0;
@@ -687,14 +687,52 @@ button.ex:hover{background:#d1fae5}
   border-top:1px solid var(--border);
   box-shadow:0 -3px 10px rgba(15,23,42,.06);
   display:flex;
-  justify-content:center;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
 }
 .float-save-bar button.p{
   max-width:788px;
   margin:0;
 }
+.ocr-persist-banner{
+  width:100%;
+  max-width:788px;
+  padding:7px 12px;
+  border-radius:9px;
+  font-size:12px;
+  font-weight:600;
+  line-height:1.35;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  box-shadow:var(--shadow-sm);
+}
+.ocr-persist-banner.gemini{
+  background:#0f766e;
+  color:#ffffff;
+  border:1.5px solid #5eead4;
+}
+.ocr-persist-banner.drive{
+  background:#d97706;
+  color:#ffffff;
+  border:1.5px solid #fde68a;
+}
+.ocr-persist-banner button{
+  background:rgba(255,255,255,.18);
+  color:#ffffff;
+  border:none;
+  padding:3px 7px;
+  border-radius:6px;
+  font-size:11px;
+  flex-shrink:0;
+}
+.ocr-persist-banner button:hover{
+  background:rgba(255,255,255,.3);
+}
 main.has-float-save{
-  padding-bottom:76px;
+  padding-bottom:118px;
 }
 
 /* Bottom Navigation */
@@ -1498,7 +1536,7 @@ function inView(p){
       const isOptSec=optSections.includes(t);
       return `<div class=card><h4><span>${t}</span>${isOptSec?'<span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Opsional</span>':'<span class="req-badge">Wajib</span>'}</h4>${fs.map(f=>field(f,v[f[0]],!isOptSec && f[0]!=='sn')).join('')}</div>`;
     }).join('')
-    +`<div class="float-save-bar"><button class=p id=sv>Simpan Data</button></div>`;
+    +`<div class="float-save-bar"><div id="ocrPersistToast" hidden></div><button class=p id=sv>Simpan Data</button></div>`;
 
   renderPhotoWidget(false);
   $('#f_loc_add').onclick=()=>promptAddLocation($('#f_loc'));
@@ -1551,9 +1589,38 @@ function inView(p){
     acInput.addEventListener('change',autoFillOwner);
   }
 
+  let activeOcrBanner=null;
+
+  const updateOcrBanner=()=>{
+    const banner=$('#ocrPersistToast');
+    if(!banner)return;
+    const remCount=app.querySelectorAll('.ocr-filled').length;
+    if(!activeOcrBanner || remCount===0){
+      activeOcrBanner=null;
+      banner.hidden=true;
+      banner.innerHTML='';
+      return;
+    }
+    banner.hidden=false;
+    banner.innerHTML=`
+      <div class="ocr-persist-banner ${esc(activeOcrBanner.engine)}">
+        <span>${esc(activeOcrBanner.text)} <b>(${remCount} kolom cek ulang)</b></span>
+        <button type="button" id="closeOcrBanner" aria-label="Tutup Info OCR">Tutup</button>
+      </div>`;
+    const btnClose=$('#closeOcrBanner');
+    if(btnClose)btnClose.onclick=()=>{activeOcrBanner=null;updateOcrBanner()};
+  };
+
+  const showOcrBanner=(engine,text)=>{
+    activeOcrBanner={engine,text};
+    updateOcrBanner();
+  };
+
   const clearOcrMarks=()=>{
     app.querySelectorAll('.ocr-filled').forEach(el=>el.classList.remove('ocr-filled'));
     app.querySelectorAll('.ocr-tag').forEach(tag=>tag.remove());
+    activeOcrBanner=null;
+    updateOcrBanner();
   };
 
   const markOcrField=el=>{
@@ -1571,6 +1638,7 @@ function inView(p){
       el.classList.remove('ocr-filled');
       const b=lbl && lbl.querySelector('.ocr-tag');
       if(b)b.remove();
+      updateOcrBanner();
     };
     el.addEventListener('input',unmark,{once:true});
     el.addEventListener('change',unmark,{once:true});
@@ -1648,10 +1716,11 @@ function inView(p){
       const compressedTag=await compressImage(file,1600,0.85);
       const extracted=await api('ocr_tag',{image:compressedTag});
       const engine=applyOcrResult(extracted);
+      const modelLabel=(extracted && extracted._ocrModel) || (engine==='drive'?'Google Drive OCR (Fallback)':'Gemini 3.5 Flash-Lite');
       if(engine==='drive'){
-        toast('OCR selesai via Google Drive OCR (Fallback) — harap periksa ulang tulisan tangan...', 'drive', 5500);
+        showOcrBanner('drive', 'OCR via ' + modelLabel + ' — periksa tulisan tangan');
       }else{
-        toast('OCR selesai via Gemini 3.5 Flash-Lite — cek kolom yang ditandai kuning.', 'gemini', 4200);
+        showOcrBanner('gemini', 'OCR via ' + modelLabel + ' — cek kolom kuning');
       }
     }).finally(()=>{e.target.value=''});
   };
