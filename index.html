@@ -560,6 +560,8 @@ button.ex:hover{background:#d1fae5}
 .badge.chk-in{background:#dbeafe;color:#1d4ed8}
 .badge.chk-avail{background:#f1f5f9;color:#334155}
 .badge.chk-inst{background:#e0e7ff;color:#3730a3}
+.kpi-card.orange{border-top-color:#ea580c;background:#fff7ed}
+.kpi-card.orange .kpi-val{color:#c2410c}
 .kpi-card.warn{border-top-color:#d97706;background:#fffbeb}
 .kpi-card.warn .kpi-val{color:#b45309}
 .kpi-card.inst{border-top-color:#4f46e5;background:#eef2ff}
@@ -3215,7 +3217,7 @@ function sumView(){
           <div class="kpi-val">${unserv}</div>
           <div class="kpi-sub">${total?100-pctServ:0}% dari total</div>
         </div>
-        <div class="kpi-card warn" id="kpiOver7Card" style="cursor:pointer" title="Klik untuk melihat daftar part Removal > 7 hari">
+        <div class="kpi-card orange" id="kpiOver7Card" style="cursor:pointer" title="Klik untuk melihat daftar part Removal > 7 hari">
           <div class="kpi-lbl" title="Date Removed/Inspected > 7 Hari">Removal &gt; 7 Hari</div>
           <div class="kpi-val">${over7Count}</div>
           <div class="kpi-sub">${over7Svc} SVC | ${over7Unsvc} UNSVC &bull; Lihat &rsaquo;</div>
