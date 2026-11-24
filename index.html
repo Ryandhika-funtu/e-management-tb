@@ -851,9 +851,9 @@ a:hover{text-decoration:underline}
 /* Toast Notification */
 #ts{
   position:fixed;left:50%;bottom:calc(134px + env(safe-area-inset-bottom));transform:translateX(-50%);
-  background:var(--navy);color:#fff;font-size:13px;font-weight:500;
-  padding:10px 18px;border-radius:999px;
-  box-shadow:var(--shadow-lg);z-index:40;max-width:90%;
+  background:var(--navy);color:#fff;font-size:13px;font-weight:600;
+  padding:11px 18px;border-radius:12px;line-height:1.4;
+  box-shadow:var(--shadow-lg);z-index:40;max-width:92%;width:max-content;
   text-align:center;display:none;
 }
 
@@ -1030,7 +1030,23 @@ const formatPicLoc=raw=>{
   return clean;
 };
 
-function toast(m){const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',3500)}
+function toast(m, type = 'default', duration = 3500) {
+  const t = $('#ts');
+  const styles = {
+    default: { bg: 'var(--navy)', color: '#ffffff', border: 'transparent' },
+    gemini:  { bg: '#0f766e', color: '#ffffff', border: '#5eead4' },
+    drive:   { bg: '#d97706', color: '#ffffff', border: '#fde68a' },
+    error:   { bg: 'var(--red)', color: '#ffffff', border: '#fecaca' }
+  };
+  const st = styles[type] || styles.default;
+  t.textContent = m;
+  t.style.background = st.bg;
+  t.style.color = st.color;
+  t.style.border = '1.5px solid ' + st.border;
+  t.style.display = 'block';
+  clearTimeout(t.h);
+  t.h = setTimeout(() => { t.style.display = 'none'; }, duration);
+}
 
 async function api(a,d){
   if(window.google && google.script && google.script.run){
@@ -1553,8 +1569,10 @@ function inView(p){
     el.addEventListener('change',unmark,{once:true});
   };
 
-  const applyOcrResult=data=>{
-    if(!data || typeof data!=='object')return;
+  const applyOcrResult=rawData=>{
+    if(!rawData || typeof rawData!=='object')return;
+    // Pisahkan metadata _ocrEngine & _ocrModel agar tidak pernah menyentuh input form
+    const {_ocrEngine, _ocrModel, ...data} = rawData;
     clearOcrMarks();
     // 'owner' dikeluarkan dari textKeys agar tidak terisi teks mentah dari tag (misal 'GIA') jika A/C Reg belum terdaftar
     const textKeys=['ac','desc','pn','sn','qty','rno','rdet','disc','wno','wdet','rby','dby'];
@@ -1613,6 +1631,7 @@ function inView(p){
     }
     const firstHighlighted=app.querySelector('.ocr-filled');
     if(firstHighlighted)firstHighlighted.scrollIntoView({behavior:'smooth',block:'center'});
+    return _ocrEngine || 'gemini';
   };
 
   const handleOcrFile=e=>{
@@ -1621,8 +1640,12 @@ function inView(p){
     run(async()=>{
       const compressedTag=await compressImage(file,1600,0.85);
       const extracted=await api('ocr_tag',{image:compressedTag});
-      applyOcrResult(extracted);
-      toast('OCR selesai! Silakan periksa kembali hasil isian form.');
+      const engine=applyOcrResult(extracted);
+      if(engine==='drive'){
+        toast('OCR selesai via Google Drive OCR (Fallback) — harap periksa ulang tulisan tangan...', 'drive', 5500);
+      }else{
+        toast('OCR selesai via Gemini 3.5 Flash-Lite — cek kolom yang ditandai kuning.', 'gemini', 4200);
+      }
     }).finally(()=>{e.target.value=''});
   };
   $('#btnOcrCam').onclick=()=>$('#inpOcrCam').click();
