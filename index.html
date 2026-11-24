@@ -178,6 +178,7 @@ main{
     max-width:100%;
     padding:20px 28px;
   }
+  /* Form Input & Auth tetap nyaman dibaca di tengah */
   main.narrow-view{
     max-width:820px;
   }
@@ -189,6 +190,7 @@ main{
   #logList.cards-grid .log-item{
     margin-bottom:0;
   }
+  /* Grid 2 kolom untuk tampilan Cards di Daftar, Check-Out & Check-In */
   #ls.cards-grid,#coLs.cards-grid,#ciLs.cards-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -201,6 +203,7 @@ main{
     grid-column:1 / -1;
     margin-top:0;
   }
+  /* Grid 2 kolom untuk kartu ringkasan di Summary */
   #sumBody{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -387,7 +390,7 @@ button.ex:hover{background:#d1fae5}
   font-size:12px;font-weight:600;color:var(--muted);
 }
 
-/* Custom Searchable Dropdown */
+/* Custom Searchable Dropdown (Current Location) */
 .loc-wrap{position:relative;width:100%}
 .loc-dd{
   position:absolute;left:0;right:0;top:calc(100% + 4px);
@@ -700,7 +703,7 @@ nav button.on::before{
 }
 .sheet .x:hover{background:#e2e8f0;color:var(--text)}
 
-/* Sub-Modal Pop-up */
+/* Sub-Modal Pop-up (Tambah Lokasi Baru) */
 #subMd{
   position:fixed;inset:0;
   background:rgba(15,23,42,.58);
@@ -877,6 +880,7 @@ const WA='https://wa.me/6281318427266';
 const RT=['','Inspection/Repair/Bench Check/Overhaul/Modification/Test/Others','Temporary Storage'];
 const WT=['','Inspection','Repair','Bench Check','Overhaul','Modification','Test','Calibration','Cleaning','Others'];
 
+// Professional Crisp SVG Icons
 const ICO = {
   scan: `<svg class="ico" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>`,
   camera: `<svg class="ico" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
@@ -1104,6 +1108,7 @@ function authView(reg){
   });
 }
 
+// Kompresi gambar otomatis sebelum diunggah (maks. 1280px, JPEG 78%) agar upload & download cepat
 function compressImage(file, maxDim = 1280, quality = 0.78){
   return new Promise((resolve,reject)=>{
     if(!file || !file.type.startsWith('image/')){
@@ -1268,7 +1273,7 @@ function promptAddOwner(selectEl){
         <button type="button" class="s" id="subClose" aria-label="Tutup" style="width:30px;height:30px;padding:0;border-radius:50%">${ICO.close}</button>
       </div>
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px">
-        Nama Owner baru akan otomatis tersimpan ke database dan langsung terpilih pada daftar.
+        Nama Owner baru akan otomatis tersimpan ke sheet <b>owner</b> dan langsung terpilih pada daftar.
       </p>
       <label>Nama Owner Baru <span style="color:var(--red)">*</span>
         <input id="subOwnerInp" type="text" placeholder="Contoh: GARUDA INDONESIA / KLM / AEROTRANS CARGO" autocomplete="off">
@@ -1363,6 +1368,7 @@ function inView(p){
   $('#f_loc_add').onclick=()=>promptAddLocation($('#f_loc'));
   $('#f_owner_add').onclick=()=>promptAddOwner($('#f_owner'));
 
+  // Sinkronisasi daftar lokasi & owner terbaru dari Google Sheets saat membuka form input
   api('locations').then(locs=>{
     if(Array.isArray(locs)){
       locations=locs;
@@ -1379,6 +1385,7 @@ function inView(p){
     }
   }).catch(()=>{});
 
+  // Auto-fill Owner (2) jika A/C REG / NHA (1) cocok dengan database, dan reset jika belum terdaftar
   const acInput=$('#f_ac'),ownerInput=$('#f_owner');
   if(acInput && ownerInput){
     ownerInput.addEventListener('change',()=>{
@@ -1436,6 +1443,7 @@ function inView(p){
   const applyOcrResult=data=>{
     if(!data || typeof data!=='object')return;
     clearOcrMarks();
+    // 'owner' dikeluarkan dari textKeys agar tidak terisi teks mentah dari tag (misal 'GIA') jika A/C Reg belum terdaftar
     const textKeys=['ac','desc','pn','sn','qty','rno','rdet','disc','wno','wdet','rby','dby'];
     if(!edit && data.bc && !$('#f_bc').value.trim()){
       const bcEl=$('#f_bc');
@@ -1452,6 +1460,7 @@ function inView(p){
         markOcrField(el);
       }
     });
+    // Reset Owner sebelum dicocokkan dengan A/C REG atau daftar master sheet 'owner'
     if(ownerInput){
       ownerInput.value='';
       delete ownerInput.dataset.autofilled;
@@ -1480,6 +1489,7 @@ function inView(p){
       markOcrField(el);
     }
     if(acInput)acInput.dispatchEvent(new Event('change'));
+    // Jika A/C Reg belum terdaftar di database, cocokkan hasil OCR Owner hanya jika persis ada di master sheet 'owner'
     if(ownerInput && !ownerInput.value && data.owner){
       const ocrOwner=String(data.owner).trim().toUpperCase();
       const validOwners=getAllOwners();
@@ -3058,194 +3068,323 @@ function sumView(){
     const serv=filtered.filter(p=>isOk(p.status)).length;
     const unserv=total-serv;
     const pctServ=total?Math.round((serv/total)*100):0;
-    const pctUnserv=total?Math.round((unserv/total)*100):0;
 
-    const totalQty=filtered.reduce((acc,p)=>acc+(parseInt(p.qty,10)||1),0);
-    const servQty=filtered.filter(p=>isOk(p.status)).reduce((acc,p)=>acc+(parseInt(p.qty,10)||1),0);
-    const unservQty=totalQty-servQty;
-
-    const availCnt=filtered.filter(p=>!p.chk).length;
-    const chkInCnt=filtered.filter(p=>p.chk==='CHECK-IN').length;
-    const chkOutCnt=filtered.filter(p=>p.chk==='CHECK-OUT').length;
-    const instCnt=filtered.filter(p=>p.chk==='INSTALLED').length;
-    const pctAvail=total?Math.round((availCnt/total)*100):0;
-    const pctChkIn=total?Math.round((chkInCnt/total)*100):0;
-    const pctChkOut=total?Math.round((chkOutCnt/total)*100):0;
-    const pctInst=total?Math.round((instCnt/total)*100):0;
-
-    const over7Count=filtered.filter(p=>{
-      if(p.chk==='INSTALLED')return false;
+    const over7List=filtered.filter(p=>{
       const age=getRemovedAgeDays(p.rdate);
       return age!==null && age>7;
-    }).length;
+    });
+    const over7Count=over7List.length;
+    const over7Svc=over7List.filter(p=>isOk(p.status)).length;
+    const over7Unsvc=over7Count-over7Svc;
 
-    const groupBy=keyFn=>{
+    const chkOutList=filtered.filter(p=>p.chk==='CHECK-OUT');
+    const chkOutCount=chkOutList.length;
+    const chkOutSvc=chkOutList.filter(p=>isOk(p.status)).length;
+    const chkOutUnsvc=chkOutCount-chkOutSvc;
+
+    const instList=filtered.filter(p=>p.chk==='INSTALLED');
+    const instCount=instList.length;
+    const pctInst=total?Math.round((instCount/total)*100):0;
+
+    const groupBy=(fn)=>{
       const map=new Map();
       filtered.forEach(p=>{
-        const label=keyFn(p)||'TIDAK DIISI';
-        if(!map.has(label))map.set(label,{name:label,total:0,serv:0,unserv:0,qty:0,avail:0,chkIn:0,chkOut:0,inst:0});
-        const g=map.get(label);
-        g.total++;
-        g.qty+=(parseInt(p.qty,10)||1);
-        if(isOk(p.status))g.serv++;
-        else g.unserv++;
-        if(p.chk==='CHECK-OUT')g.chkOut++;
-        else if(p.chk==='CHECK-IN')g.chkIn++;
-        else if(p.chk==='INSTALLED')g.inst++;
-        else g.avail++;
+        const key=fn(p)||'TIDAK DIKETAHUI';
+        if(!map.has(key))map.set(key,{name:key,ok:0,un:0,tot:0});
+        const g=map.get(key);
+        if(isOk(p.status))g.ok++;else g.un++;
+        g.tot++;
       });
-      return Array.from(map.values()).sort((a,b)=>b.total-a.total);
+      return Array.from(map.values()).sort((a,b)=>b.tot-a.tot);
     };
+
+    const renderGroup=(items,filterType)=>items.length
+      ? items.map(g=>{
+          const pct=g.tot?Math.round((g.ok/g.tot)*100):0;
+          return `
+            <div class="sum-row" style="cursor:pointer" data-ftype="${filterType}" data-fval="${esc(g.name)}">
+              <div class="sum-head">
+                <span class="sum-name">${esc(g.name)}</span>
+                <div class="sum-pills">
+                  ${stFilter!=='Unserviceable'?`<span class="pill-ok">${g.ok} SVC</span>`:''}
+                  ${stFilter!=='Serviceable'?`<span class="pill-un">${g.un} UNSVC</span>`:''}
+                  <span class="pill-tot">${g.tot}</span>
+                </div>
+              </div>
+              <div class="prog-bar" title="Serviceable ${pct}%">
+                <div class="prog-ok" style="width:${pct}%"></div>
+              </div>
+            </div>`;
+        }).join('')
+      : '<small style="color:var(--muted)">Tidak ada data untuk filter ini.</small>';
+
+    const groupAcByChk=(chkTarget)=>{
+      const acTotMap=new Map();
+      filtered.forEach(p=>{
+        const key=String(p.ac||'').trim().toUpperCase()||'TIDAK DIKETAHUI';
+        acTotMap.set(key,(acTotMap.get(key)||0)+1);
+      });
+      const map=new Map();
+      filtered.filter(p=>p.chk===chkTarget).forEach(p=>{
+        const key=String(p.ac||'').trim().toUpperCase()||'TIDAK DIKETAHUI';
+        if(!map.has(key))map.set(key,{name:key,ok:0,un:0,count:0,acTot:acTotMap.get(key)||0});
+        const g=map.get(key);
+        if(isOk(p.status))g.ok++;else g.un++;
+        g.count++;
+      });
+      return Array.from(map.values()).sort((a,b)=>b.count-a.count);
+    };
+
+    const renderChkAcGroup=(items,chkTarget)=>items.length
+      ? items.map(g=>{
+          const pctAc=g.acTot?Math.round((g.count/g.acTot)*100):0;
+          const isInst=chkTarget==='INSTALLED';
+          return `
+            <div class="sum-row" style="cursor:pointer" data-ftype="chk_ac" data-chk="${chkTarget}" data-fval="${esc(g.name)}">
+              <div class="sum-head">
+                <span class="sum-name">${esc(g.name)}</span>
+                <div class="sum-pills">
+                  ${stFilter!=='Unserviceable'?`<span class="pill-ok">${g.ok} SVC</span>`:''}
+                  ${stFilter!=='Serviceable'?`<span class="pill-un">${g.un} UNSVC</span>`:''}
+                  <span class="${isInst?'pill-inst':'pill-out'}">${g.count}/${g.acTot} (${pctAc}%)</span>
+                </div>
+              </div>
+              <div class="prog-bar chk-bar" title="${chkTarget}: ${g.count} dari ${g.acTot} part (${pctAc}%)">
+                <div class="${isInst?'prog-inst':'prog-out'}" style="width:${pctAc}%"></div>
+              </div>
+            </div>`;
+        }).join('')
+      : `<small style="color:var(--muted)">Belum ada part berstatus ${chkTarget}.</small>`;
 
     const byLoc=groupBy(p=>String(p.loc||'').trim().toUpperCase());
     const byAc=groupBy(p=>String(p.ac||'').trim().toUpperCase());
-    const byRtype=groupBy(p=>String(p.rtype||'').trim().toUpperCase());
-
-    const renderGroupList=list=>{
-      if(!list.length)return '<small style="color:var(--muted)">Belum ada data untuk ditampilkan.</small>';
-      return list.map(g=>{
-        const wOk=g.total?((g.serv/g.total)*100).toFixed(1):0;
-        const wInst=g.total?((g.inst/g.total)*100).toFixed(1):0;
-        const wOut=g.total?((g.chkOut/g.total)*100).toFixed(1):0;
-        const wIn=g.total?((g.chkIn/g.total)*100).toFixed(1):0;
-        return `
-          <div class="sum-row">
-            <div class="sum-head">
-              <span class="sum-name">${esc(g.name)} <small style="font-weight:500;color:var(--muted)">(${g.qty} qty)</small></span>
-              <div class="sum-pills" style="flex-wrap:wrap;justify-content:flex-end">
-                <span class="pill-ok">SVC: ${g.serv}</span>
-                <span class="pill-un">UNSVC: ${g.unserv}</span>
-                <span class="pill-tot">${g.total}</span>
-              </div>
-            </div>
-            <div class="prog-bar" title="Serviceable ${g.serv} | Un-Serviceable ${g.unserv}">
-              <div class="prog-ok" style="width:${wOk}%"></div>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px">
-              <span style="color:var(--muted);font-weight:600">Status Penyimpanan:</span>
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <span style="color:#475569;font-weight:600">Avail: <b>${g.avail}</b></span>
-                <span style="color:#1d4ed8;font-weight:600">In: <b>${g.chkIn}</b></span>
-                <span style="color:#b45309;font-weight:600">Out: <b>${g.chkOut}</b></span>
-                <span style="color:#3730a3;font-weight:600">Inst: <b>${g.inst}</b></span>
-              </div>
-            </div>
-            <div class="prog-bar chk-bar" style="height:4px;margin-top:3px" title="Installed ${g.inst} | Check-Out ${g.chkOut} | Check-In ${g.chkIn} | Avail ${g.avail}">
-              <div class="prog-inst" style="width:${wInst}%"></div>
-              <div class="prog-out" style="width:${wOut}%"></div>
-              <div style="background:#2563eb;height:100%;width:${wIn}%"></div>
-            </div>
-          </div>`;
-      }).join('');
-    };
+    const byDisc=groupBy(p=>String(p.disc||'').trim().toUpperCase()||'TANPA DISCREPANCY');
+    const chkOutByAc=groupAcByChk('CHECK-OUT');
+    const instByAc=groupAcByChk('INSTALLED');
 
     $('#sumBody').innerHTML=`
       <div class="kpi-grid kpi-6">
         <div class="kpi-card">
           <div class="kpi-lbl">Total Part</div>
           <div class="kpi-val">${total}</div>
-          <div class="kpi-sub">${totalQty} unit qty</div>
+          <div class="kpi-sub">${byLoc.length} Lokasi | ${byAc.length} A/C</div>
         </div>
         <div class="kpi-card ok">
           <div class="kpi-lbl">Serviceable</div>
           <div class="kpi-val">${serv}</div>
-          <div class="kpi-sub">${pctServ}% (${servQty} qty)</div>
+          <div class="kpi-sub">${pctServ}% dari total</div>
         </div>
         <div class="kpi-card un">
-          <div class="kpi-lbl">Un-Serviceable</div>
+          <div class="kpi-lbl" title="Un-Serviceable">Unserviceable</div>
           <div class="kpi-val">${unserv}</div>
-          <div class="kpi-sub">${pctUnserv}% (${unservQty} qty)</div>
+          <div class="kpi-sub">${total?100-pctServ:0}% dari total</div>
         </div>
-        <div class="kpi-card" style="border-top-color:#2563eb;background:#f8fbff">
-          <div class="kpi-lbl">Di Penyimpanan</div>
-          <div class="kpi-val" style="color:#1d4ed8">${availCnt + chkInCnt}</div>
-          <div class="kpi-sub">Avail: ${availCnt} (${pctAvail}%) &bull; Check-In: ${chkInCnt} (${pctChkIn}%)</div>
+        <div class="kpi-card warn" id="kpiOver7Card" style="cursor:pointer" title="Klik untuk melihat daftar part Removal > 7 hari">
+          <div class="kpi-lbl" title="Date Removed/Inspected > 7 Hari">Removal &gt; 7 Hari</div>
+          <div class="kpi-val">${over7Count}</div>
+          <div class="kpi-sub">${over7Svc} SVC | ${over7Unsvc} UNSVC &bull; Lihat &rsaquo;</div>
         </div>
-        <div class="kpi-card warn">
-          <div class="kpi-lbl">Check-Out</div>
-          <div class="kpi-val">${chkOutCnt}</div>
-          <div class="kpi-sub">${pctChkOut}% sedang dipinjam / keluar</div>
+        <div class="kpi-card warn" id="kpiChkOutCard" style="cursor:pointer" title="Klik untuk melihat daftar part Check-Out">
+          <div class="kpi-lbl" title="Part sedang Check-Out (belum Check-In)">Check-Out</div>
+          <div class="kpi-val">${chkOutCount}</div>
+          <div class="kpi-sub">${chkOutSvc} SVC | ${chkOutUnsvc} UNSVC &bull; Lihat &rsaquo;</div>
         </div>
-        <div class="kpi-card inst">
+        <div class="kpi-card inst" id="kpiInstCard" style="cursor:pointer" title="Klik untuk melihat daftar part Installed">
           <div class="kpi-lbl">Installed</div>
-          <div class="kpi-val">${instCnt}</div>
-          <div class="kpi-sub">${pctInst}% terpasang di pesawat</div>
+          <div class="kpi-val">${instCount}</div>
+          <div class="kpi-sub">${pctInst}% dari total (${instCount}/${total})</div>
         </div>
       </div>
-
-      ${over7Count>0?`
-        <div class="card" style="grid-column:1 / -1;background:#fffbeb;border-color:#fde68a;border-left:4px solid #d97706;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <div style="font-size:13px;color:#92400e">
-            Terdapat <b>${over7Count} part</b> belum terpasang dengan umur pelepasan (<i>Date 11</i>) <b>&gt; 7 hari</b>.
-          </div>
-          <button type="button" class="s" id="btnJumpOver7" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;padding:6px 12px;font-size:12px">
-            Lihat Detail &rarr;
-          </button>
-        </div>
-      `:''}
-
       <div class="card">
-        <h4><span>Distribusi per Current Location</span><span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none">${byLoc.length} lokasi</span></h4>
-        ${renderGroupList(byLoc)}
+        <h4><span>Ringkasan per Current Location</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+        ${renderGroup(byLoc,'loc')}
       </div>
-
       <div class="card">
-        <h4><span>Distribusi per A/C Reg / NHA</span><span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none">${byAc.length} registrasi</span></h4>
-        ${renderGroupList(byAc)}
+        <h4><span>Ringkasan per A/C Reg / NHA</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+        ${renderGroup(byAc,'ac')}
       </div>
-
       <div class="card">
-        <h4><span>Distribusi Alasan Pelepasan (7.b)</span><span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none">${byRtype.length} kategori</span></h4>
-        ${renderGroupList(byRtype)}
+        <h4><span>Check-Out per A/C Reg</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+        ${renderChkAcGroup(chkOutByAc,'CHECK-OUT')}
+      </div>
+      <div class="card">
+        <h4><span>Installed per A/C Reg</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik baris untuk filter</span></h4>
+        ${renderChkAcGroup(instByAc,'INSTALLED')}
+      </div>
+      <div class="card">
+        <h4><span>Ringkasan per Discrepancy (8)</span><span style="font-size:10.5px;color:var(--muted);text-transform:none;font-weight:500">Klik untuk rincian</span></h4>
+        ${renderGroup(byDisc,'disc')}
       </div>`;
 
-    if($('#btnJumpOver7')){
-      $('#btnJumpOver7').onclick=()=>{
-        sumSub='over7';
-        sumView();
+    $('#kpiOver7Card').onclick=()=>{
+      over7Status=stFilter||'';
+      sumSub='over7';
+      sumView();
+    };
+    $('#kpiChkOutCard').onclick=()=>{
+      listStatus=stFilter||'';
+      listChk='CHECK-OUT';
+      listQuery='';
+      go('list');
+    };
+    $('#kpiInstCard').onclick=()=>{
+      listStatus=stFilter||'';
+      listChk='INSTALLED';
+      listQuery='';
+      go('list');
+    };
+  };
+
+  const openDiscDetailModal=(discName)=>{
+    const stFilter=$('#sumSt').value;
+    const matched=parts.filter(p=>{
+      const dVal=String(p.disc||'').trim().toUpperCase()||'TANPA DISCREPANCY';
+      return dVal===discName && (!stFilter || isOk(p.status)===isOk(stFilter));
+    });
+
+    const totalD=matched.length;
+    const okD=matched.filter(p=>isOk(p.status)).length;
+    const unD=totalD-okD;
+
+    modal(`
+      <h3 style="margin-bottom:6px">Rincian Discrepancy (8)</h3>
+      <div style="background:#f8fafc;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:9px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-weight:700;color:var(--navy);font-size:13.5px;word-break:break-word">${esc(discName)}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <span class="pill-tot">Total: ${totalD}</span>
+          <span class="pill-ok">${okD} SVC</span>
+          <span class="pill-un">${unD} UNSVC</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">KELOMPOKKAN BERDASARKAN:</span>
+        <div class="view-toggle" role="group">
+          <button type="button" id="discByLoc" class="active" style="padding:5px 10px;font-size:12px">Location</button>
+          <button type="button" id="discByAc" style="padding:5px 10px;font-size:12px">A/C Reg</button>
+        </div>
+      </div>
+      <div id="discBreakdown"></div>
+    `);
+
+    const renderBreakdown=(mode)=>{
+      const map=new Map();
+      matched.forEach(p=>{
+        const key=mode==='loc'
+          ? (String(p.loc||'').trim().toUpperCase()||'TIDAK DIKETAHUI')
+          : (String(p.ac||'').trim().toUpperCase()||'TIDAK DIKETAHUI');
+        if(!map.has(key))map.set(key,{name:key,ok:0,un:0,items:[]});
+        const g=map.get(key);
+        if(isOk(p.status))g.ok++;else g.un++;
+        g.items.push(p);
+      });
+      const groups=Array.from(map.values()).sort((a,b)=>b.items.length-a.items.length);
+
+      $('#discBreakdown').innerHTML=groups.length
+        ? groups.map(g=>{
+            const pct=g.items.length?Math.round((g.ok/g.items.length)*100):0;
+            return `
+              <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fff">
+                <div class="sum-head">
+                  <span class="sum-name">${esc(g.name)}</span>
+                  <div class="sum-pills">
+                    <span class="pill-ok">${g.ok} SVC</span>
+                    <span class="pill-un">${g.un} UNSVC</span>
+                    <span class="pill-tot">${g.items.length}</span>
+                  </div>
+                </div>
+                <div class="prog-bar" style="margin-bottom:8px">
+                  <div class="prog-ok" style="width:${pct}%"></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  ${g.items.map(item=>`
+                    <div class="disc-part-row" data-bc="${esc(item.bc)}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:7px;background:${isOk(item.status)?'#f2fbf5':'#fff5f5'};border:1px solid ${isOk(item.status)?'#bbf7d0':'#fecaca'};cursor:pointer;font-size:12px">
+                      <div style="min-width:0">
+                        <b style="color:var(--navy)">${esc(item.bc)}</b>
+                        <span style="color:#334155"> &bull; ${esc(item.desc)||'-'}</span>
+                        <div style="color:var(--muted);font-size:11px">PN: ${esc(item.pn)||'-'} | ${mode==='loc'?'A/C: '+(esc(item.ac)||'-'):'Loc: '+(esc(item.loc)||'-')}</div>
+                      </div>
+                      <span class="badge ${isOk(item.status)?'ok':''}" style="font-size:10.5px;padding:2px 8px">${isOk(item.status)?'SVC':'UNSVC'}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>`;
+          }).join('')
+        : '<small style="color:var(--muted)">Tidak ada rincian data.</small>';
+
+      $('#discBreakdown').onclick=ev=>{
+        const itemRow=ev.target.closest('.disc-part-row[data-bc]');
+        if(!itemRow)return;
+        const targetBc=itemRow.dataset.bc;
+        closeM();
+        detail(targetBc);
       };
-    }
+    };
+
+    renderBreakdown('loc');
+    $('#discByLoc').onclick=()=>{
+      $('#discByLoc').classList.add('active');
+      $('#discByAc').classList.remove('active');
+      renderBreakdown('loc');
+    };
+    $('#discByAc').onclick=()=>{
+      $('#discByAc').classList.add('active');
+      $('#discByLoc').classList.remove('active');
+      renderBreakdown('ac');
+    };
   };
 
   renderSum();
   $('#sumSt').onchange=renderSum;
-  $('#sumRf').onclick=()=>run(async()=>{await load();renderSum()});
+  $('#sumRf').onclick=()=>run(async()=>{await load();renderSum();toast('Data diperbarui')});
   $('#sumExp').onclick=openExportModal;
+
+  $('#sumBody').onclick=e=>{
+    const row=e.target.closest('.sum-row[data-fval]');
+    if(!row)return;
+    const ftype=row.dataset.ftype;
+    const val=row.dataset.fval;
+    if(ftype==='disc'){
+      openDiscDetailModal(val);
+      return;
+    }
+    const stFilter=$('#sumSt').value;
+    listStatus=stFilter||'';
+    listChk=ftype==='chk_ac'?(row.dataset.chk||''):'';
+    listQuery=(val!=='TIDAK DIKETAHUI')?val:'';
+    go('list');
+  };
 }
 
 function renderOver7View(){
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
+  const baseOver7=parts
+    .map(p=>({...p,_age:getRemovedAgeDays(p.rdate)}))
+    .filter(p=>p._age!==null && p._age>7)
+    .sort((a,b)=>b._age-a._age);
 
-  const allOver7=parts
-    .filter(p=>p.chk!=='INSTALLED')
-    .map(p=>({...p, ageDays:getRemovedAgeDays(p.rdate)}))
-    .filter(p=>p.ageDays!==null && p.ageDays>7)
-    .sort((a,b)=>b.ageDays-a.ageDays);
+  const acOpts=Array.from(new Set(baseOver7.map(p=>String(p.ac||'').trim().toUpperCase()).filter(Boolean))).sort();
+  const locOpts=Array.from(new Set(baseOver7.map(p=>String(p.loc||'').trim().toUpperCase()).filter(Boolean))).sort();
 
-  const acOpts=Array.from(new Set(allOver7.map(p=>String(p.ac||'').trim().toUpperCase()).filter(Boolean))).sort();
-  const locOpts=Array.from(new Set(allOver7.map(p=>String(p.loc||'').trim().toUpperCase()).filter(Boolean))).sort();
+  if(over7Ac && !acOpts.includes(over7Ac))over7Ac='';
+  if(over7Loc && !locOpts.includes(over7Loc))over7Loc='';
 
   $('#sumWrap').innerHTML=`
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0;font-size:15.5px">Part dengan Removal Date &gt; 7 Hari</h3>
-          <small style="color:var(--muted)">Dihitung dari kolom <b>Date (11)</b> hingga hari ini (tidak termasuk part berstatus <b>Installed</b>).</small>
-        </div>
-        <button type="button" class="s" id="rfOver7" style="padding:6px 10px;font-size:12px">${ICO.refresh}<span>Muat ulang</span></button>
+      <div class="row">
+        <input id="qOver7" placeholder="CARI BARCODE / PN / SN / DESC / A/C / LOKASI" type="search" value="${esc(over7Query)}">
+        <button class="s" id="rfOver7" type="button">${ICO.refresh}<span>Muat ulang</span></button>
       </div>
       <div class="row" style="flex-wrap:wrap">
-        <input id="qOver7" type="search" placeholder="CARI BARCODE / PN / SN / DESKRIPSI / ORDER" value="${esc(over7Query)}" style="flex:2;min-width:200px">
-        <select id="fsOver7" style="flex:1;min-width:140px">
+        <select id="fsOver7St">
           <option value="" ${over7Status===''?'selected':''}>Semua Status</option>
           <option value="Serviceable" ${over7Status==='Serviceable'?'selected':''}>Serviceable</option>
           <option value="Unserviceable" ${over7Status==='Unserviceable'?'selected':''}>Un-Serviceable</option>
         </select>
-        <select id="facOver7" style="flex:1;min-width:130px">
+        <select id="fsOver7Ac">
           <option value="" ${over7Ac===''?'selected':''}>Semua A/C Reg</option>
           ${acOpts.map(a=>`<option value="${esc(a)}" ${over7Ac===a?'selected':''}>${esc(a)}</option>`).join('')}
         </select>
-        <select id="flocOver7" style="flex:1;min-width:145px">
+        <select id="fsOver7Loc">
           <option value="" ${over7Loc===''?'selected':''}>Semua Lokasi</option>
           ${locOpts.map(l=>`<option value="${esc(l)}" ${over7Loc===l?'selected':''}>${esc(l)}</option>`).join('')}
         </select>
@@ -3253,15 +3392,12 @@ function renderOver7View(){
       <div class="list-meta" style="gap:6px">
         <small id="cntOver7" style="white-space:nowrap"></small>
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-          <div class="view-toggle" role="group" aria-label="Mode Tampilan">
-            <button type="button" id="over7Table" class="${over7Mode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
+          <div class="view-toggle" role="group" aria-label="Mode Tampilan Aging">
             <button type="button" id="over7Cards" class="${over7Mode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
+            <button type="button" id="over7Table" class="${over7Mode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
           </div>
-          <button type="button" class="ex" id="btnExpOver7Xlsx" title="Export Excel" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
-            ${ICO.fileSheet}<span>Excel</span>
-          </button>
-          <button type="button" class="p" id="btnExpOver7Pdf" title="Export PDF" style="width:auto;padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
-            ${ICO.filePdf}<span>PDF</span>
+          <button type="button" class="ex" id="btnExportOver7" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
+            ${ICO.download}<span>Export</span>
           </button>
         </div>
       </div>
@@ -3269,22 +3405,22 @@ function renderOver7View(){
     <div id="over7Ls"></div>`;
 
   let over7Page=1;
-  const getFilteredOver7=()=>{
+  const getFiltered=()=>{
     over7Query=$('#qOver7').value;
-    over7Status=$('#fsOver7').value;
-    over7Ac=$('#facOver7').value;
-    over7Loc=$('#flocOver7').value;
+    over7Status=$('#fsOver7St').value;
+    over7Ac=$('#fsOver7Ac').value;
+    over7Loc=$('#fsOver7Loc').value;
     const q=over7Query.toLowerCase();
-    return allOver7.filter(p=>
+    return baseOver7.filter(p=>
       (!over7Status || isOk(p.status)===isOk(over7Status)) &&
       (!over7Ac || String(p.ac||'').trim().toUpperCase()===over7Ac) &&
       (!over7Loc || String(p.loc||'').trim().toUpperCase()===over7Loc) &&
-      (!q || [p.bc,p.ac,p.desc,p.pn,p.sn,p.loc,p.rno,p.wno,p.rdate].join(' ').toLowerCase().includes(q))
+      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.rdate].join(' ').toLowerCase().includes(q))
     );
   };
 
   const drawOver7=()=>{
-    const r=getFilteredOver7();
+    const r=getFiltered();
     const total=r.length;
     const totalPages=Math.max(1,Math.ceil(total/pageSize));
     if(over7Page>totalPages)over7Page=totalPages;
@@ -3295,9 +3431,10 @@ function renderOver7View(){
       ? `${startIdx+1}-${Math.min(startIdx+pageSize,total)} dari ${total} part (> 7 hari)`
       : '0 part (> 7 hari)';
 
+    const box=$('#over7Ls');
     if(!total){
-      $('#over7Ls').classList.remove('cards-grid');
-      $('#over7Ls').innerHTML='<div class="card ctr">Tidak ada part dengan Removal Date &gt; 7 hari yang sesuai filter.</div>';
+      box.classList.remove('cards-grid');
+      box.innerHTML='<div class="card ctr">Tidak ada part dengan Date Removed/Inspected &gt; 7 hari yang sesuai filter.</div>';
       return;
     }
 
@@ -3305,20 +3442,20 @@ function renderOver7View(){
       <div class="pg-bar">
         <div class="pg-size">
           <span>Tampilkan</span>
-          <select id="o7PgSel">
+          <select id="over7PgSel">
             ${[20,50,100].map(n=>`<option value="${n}" ${pageSize===n?'selected':''}>${n}</option>`).join('')}
           </select>
         </div>
         <div class="pg-ctrl">
-          <button type="button" class="s" id="o7PgPrev" ${over7Page<=1?'disabled':''}>&lsaquo; Prev</button>
+          <button type="button" class="s" id="over7PgPrev" ${over7Page<=1?'disabled':''}>&lsaquo; Prev</button>
           <span class="pg-info">Hal ${over7Page} / ${totalPages}</span>
-          <button type="button" class="s" id="o7PgNext" ${over7Page>=totalPages?'disabled':''}>Next &rsaquo;</button>
+          <button type="button" class="s" id="over7PgNext" ${over7Page>=totalPages?'disabled':''}>Next &rsaquo;</button>
         </div>
       </div>`;
 
+    box.classList.toggle('cards-grid', over7Mode==='cards');
     if(over7Mode==='table'){
-      $('#over7Ls').classList.remove('cards-grid');
-      $('#over7Ls').innerHTML=`
+      box.innerHTML=`
         <div class="tbl-wrap">
           <table class="part-tbl">
             <thead>
@@ -3328,9 +3465,9 @@ function renderOver7View(){
                 <th>Description</th>
                 <th>Part Number</th>
                 <th>Serial Number</th>
-                <th>Removal Date (11)</th>
-                <th>Umur</th>
                 <th>Lokasi</th>
+                <th>Removed Date (11)</th>
+                <th>Durasi</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -3342,314 +3479,416 @@ function renderOver7View(){
                   <td>${esc(p.desc)||'-'}</td>
                   <td>${esc(p.pn)||'-'}</td>
                   <td>${esc(p.sn)||'-'}</td>
-                  <td style="white-space:nowrap">${esc(p.rdate)||'-'}</td>
-                  <td><span class="age-pill">${p.ageDays} hari</span></td>
                   <td>${esc(p.loc)||'-'}</td>
+                  <td style="white-space:nowrap">${esc(p.rdate)||'-'}</td>
+                  <td><span class="age-pill">${p._age} Hari</span></td>
                   <td>
-                    <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'SVC':'UNSVC'}</span>
-                    ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':'chk-in'}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
+                    <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
+                    ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
                   </td>
                 </tr>`).join('')}
             </tbody>
           </table>
         </div>${pgHtml}`;
     }else{
-      $('#over7Ls').classList.add('cards-grid');
-      $('#over7Ls').innerHTML=paged.map(p=>`
+      box.innerHTML=paged.map(p=>`
         <div class="item ${isOk(p.status)?'ok':''}" data-bc="${esc(p.bc)}">
-          <div class="row">
+          <div class=row>
             <b>${esc(p.bc)}</b>
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end">
-              <span class="age-pill">${p.ageDays} hari</span>
-              <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'SVC':'UNSVC'}</span>
+              <span class="age-pill">${p._age} Hari</span>
+              ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}">${esc(p.chk)}</span>`:''}
+              <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
             </div>
           </div>
           <div>${esc(p.desc)||'-'}</div>
           <small>
-            <span>A/C: <b>${esc(p.ac)||'-'}</b> | PN ${esc(p.pn)||'-'} | SN ${esc(p.sn)||'-'} | Rem. Date: <b>${esc(p.rdate)}</b> | Lokasi: ${esc(p.loc)||'-'}</span>
+            <span>A/C: ${esc(p.ac)||'-'} | PN ${esc(p.pn)||'-'} | Lokasi: ${esc(p.loc)||'-'} | Removed: ${esc(p.rdate)||'-'}</span>
+            ${p.photo?`<span class="has-photo">${ICO.imageSm}<span>Foto</span></span>`:''}
           </small>
         </div>`).join('')+pgHtml;
     }
 
-    $('#o7PgSel').onchange=e=>{
+    $('#over7PgSel').onchange=e=>{
       pageSize=+e.target.value;
       localStorage.setItem('pageSize',String(pageSize));
       over7Page=1;
       drawOver7();
     };
-    $('#o7PgPrev').onclick=()=>{if(over7Page>1){over7Page--;drawOver7();window.scrollTo({top:0,behavior:'smooth'})}};
-    $('#o7PgNext').onclick=()=>{if(over7Page<totalPages){over7Page++;drawOver7();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#over7PgPrev').onclick=()=>{if(over7Page>1){over7Page--;drawOver7();window.scrollTo({top:0,behavior:'smooth'})}};
+    $('#over7PgNext').onclick=()=>{if(over7Page<totalPages){over7Page++;drawOver7();window.scrollTo({top:0,behavior:'smooth'})}};
   };
 
   drawOver7();
-
-  let tmr=null;
+  let searchTimer=null;
   $('#qOver7').oninput=()=>{
-    clearTimeout(tmr);
-    tmr=setTimeout(()=>{over7Page=1;drawOver7()},120);
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{over7Page=1;drawOver7()},120);
   };
-  $('#fsOver7').onchange=()=>{over7Page=1;drawOver7()};
-  $('#facOver7').onchange=()=>{over7Page=1;drawOver7()};
-  $('#flocOver7').onchange=()=>{over7Page=1;drawOver7()};
-  $('#over7Table').onclick=()=>{
-    over7Mode='table';localStorage.setItem('over7Mode','table');
-    $('#over7Table').classList.add('active');$('#over7Cards').classList.remove('active');
-    drawOver7();
-  };
+  $('#fsOver7St').onchange=()=>{over7Page=1;drawOver7()};
+  $('#fsOver7Ac').onchange=()=>{over7Page=1;drawOver7()};
+  $('#fsOver7Loc').onchange=()=>{over7Page=1;drawOver7()};
+
   $('#over7Cards').onclick=()=>{
     over7Mode='cards';localStorage.setItem('over7Mode','cards');
     $('#over7Cards').classList.add('active');$('#over7Table').classList.remove('active');
     drawOver7();
   };
-  $('#rfOver7').onclick=()=>run(async()=>{await load();renderOver7View()});
+  $('#over7Table').onclick=()=>{
+    over7Mode='table';localStorage.setItem('over7Mode','table');
+    $('#over7Table').classList.add('active');$('#over7Cards').classList.remove('active');
+    drawOver7();
+  };
+  $('#rfOver7').onclick=()=>run(async()=>{await load();renderOver7View();toast('Data diperbarui')});
   $('#over7Ls').onclick=e=>{
     const target=e.target.closest('.item, .row-item');
-    if(target)detail(target.dataset.bc, false);
+    if(target)detail(target.dataset.bc);
   };
 
-  const exportOver7=fmt=>run(async()=>{
-    const filtered=getFilteredOver7();
-    if(!filtered.length)throw new Error('Tidak ada data Removal > 7 hari untuk diexport');
-    const lbl=['REMOVAL > 7 HARI', over7Status, over7Ac, over7Loc, over7Query].filter(Boolean).join(' - ').toUpperCase();
-    const res=await api('export',{
-      loc:'SELECTED',
-      fmt,
-      bcs:filtered.map(p=>p.bc),
-      label:lbl
-    });
-    downloadBase64File(res.base64,res.fileName,res.mimeType);
-    toast('File '+res.fileName+' berhasil diunduh');
-  });
-  $('#btnExpOver7Xlsx').onclick=()=>exportOver7('xlsx');
-  $('#btnExpOver7Pdf').onclick=()=>exportOver7('pdf');
-}
+  $('#btnExportOver7').onclick=()=>{
+    const filtered=getFiltered();
+    if(!filtered.length){
+      toast('Tidak ada data Removal > 7 hari yang sesuai filter untuk diexport');
+      return;
+    }
+    const labelParts=[
+      'REMOVAL > 7 HARI',
+      over7Status ? (isOk(over7Status)?'SERVICEABLE':'UN-SERVICEABLE') : '',
+      over7Ac,
+      over7Loc,
+      over7Query.trim()
+    ].filter(Boolean);
+    const filterLabel=labelParts.join(' - ').toUpperCase();
 
-function showDeletedLogDetail(log){
-  const historyHtml=(log.history||[]).map(h=>`
-    <div>
-      <b>${esc(h.loc)||'-'}</b> (${esc(formatTrackStatus(h.st))})
-      <small>${esc(h.ts)} oleh ${esc(h.by)}${h.note?' | '+esc(h.note):''}</small>
-    </div>`).join('')||'<small>Tidak ada riwayat pergerakan.</small>';
-
-  modal(`
-    <h3>Detail Log Penghapusan</h3>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <b style="font-size:16px;color:var(--navy)">${esc(log.bc)}</b>
-      <span class="badge del">DELETED</span>
-    </div>
-    <dl>
-      <dt>Waktu Hapus</dt><dd>${esc(log.ts)}</dd>
-      <dt>Dihapus Oleh</dt><dd>${esc(log.by)}</dd>
-      <dt>Reason Deletion</dt><dd style="color:var(--red-text)">${esc(log.reason)}</dd>
-      <dt>A/C Reg / NHA</dt><dd>${esc(log.ac)}</dd>
-      <dt>Description</dt><dd>${esc(log.desc)}</dd>
-      <dt>Part Number</dt><dd>${esc(log.pn)}</dd>
-      <dt>Serial Number</dt><dd>${esc(log.sn)}</dd>
-      <dt>Lokasi Terakhir</dt><dd>${esc(log.loc)||'-'}</dd>
-      <dt>Status Terakhir</dt><dd>${esc(log.lastStatus)}</dd>
-    </dl>
-    <h4>Riwayat Pergerakan Sebelum Dihapus</h4>
-    <div class="tl">${historyHtml}</div>
-  `);
-}
-
-function admView(){
-  run(async()=>{
-    const [us,logs]=await Promise.all([api('users'),api('del_logs')]);
-    const renderAdm=()=>{
-      app.classList.toggle('narrow-view', admSub==='users');
-      app.innerHTML=`
-        <div class="sub-tabs" role="tablist">
-          <button type="button" id="tabAdmUsers" class="${admSub==='users'?'active':''}">${ICO.user}<span>Manajemen User (${us.length})</span></button>
-          <button type="button" id="tabAdmLogs" class="${admSub==='logs'?'active':''}">${ICO.trash}<span>Log Penghapusan (${logs.length})</span></button>
+    modal(`
+      <h3>Export Part Removal &gt; 7 Hari</h3>
+      <p style="font-size:13px;color:var(--muted);margin-top:-4px">
+        Mengekspor <b>${filtered.length} part</b> sesuai filter aktif (<b>${esc(filterLabel)}</b>) dalam layout Landscape A4.
+      </p>
+      <label>Pilih Format Dokumen
+        <div class="fmt-grid">
+          <button type="button" class="ex" id="btnExpOver7Xlsx">${ICO.fileSheet}<span>Excel (.xlsx)</span></button>
+          <button type="button" class="p" id="btnExpOver7Pdf">${ICO.filePdf}<span>PDF (.pdf)</span></button>
         </div>
-        ${admSub==='users' ? `
-          <div class=card>
-            <h3>Manajemen User</h3>
-            <p style="font-size:12px;color:var(--muted);margin-top:-6px">
-              <b>Role User</b> hanya dapat melihat data, sedangkan <b>PIC</b> &amp; <b>Admin</b> dapat menambah, mengubah, dan menghapus data.
+      </label>
+    `);
+    const triggerOver7Export=fmt=>run(async()=>{
+      const res=await api('export',{
+        loc:'SELECTED',
+        fmt,
+        bcs:filtered.map(p=>p.bc),
+        label:filterLabel
+      });
+      downloadBase64File(res.base64,res.fileName,res.mimeType);
+      closeM();
+      toast('File '+res.fileName+' berhasil diunduh');
+    });
+    $('#btnExpOver7Xlsx').onclick=()=>triggerOver7Export('xlsx');
+    $('#btnExpOver7Pdf').onclick=()=>triggerOver7Export('pdf');
+  };
+}
+
+async function admView(){
+  app.classList.toggle('narrow-view', admSub==='users');
+  app.innerHTML=`
+    <div class="sub-tabs" role="tablist">
+      <button type="button" id="tabAdmUsers" class="${admSub==='users'?'active':''}">${ICO.user}<span>Kelola Pengguna</span></button>
+      <button type="button" id="tabAdmLogs" class="${admSub==='logs'?'active':''}">${ICO.trash}<span>Log Penghapusan</span></button>
+    </div>
+    <div id="admBody"></div>`;
+
+  $('#tabAdmUsers').onclick=()=>{
+    if(admSub==='users')return;
+    admSub='users';
+    admView();
+  };
+  $('#tabAdmLogs').onclick=()=>{
+    if(admSub==='logs')return;
+    admSub='logs';
+    admView();
+  };
+
+  if(admSub==='users'){
+    $('#admBody').innerHTML='<div class=card id=ul>Memuat pengguna...</div>';
+    await run(async()=>{
+      const us=await api('users');
+      const L={active:'Aktif',pending:'Menunggu',off:'Nonaktif'};
+      const R={admin:'Admin',pic:'PIC',user:'User'};
+      $('#ul').innerHTML='<h3>Kelola pengguna ('+us.length+')</h3>'+us.map(u=>`
+        <div class=u>
+          <div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${R[u.r]||u.r} | ${L[u.st]||u.st}</small></div>
+          <div class=a>
+            ${u.nip!==me.nip?`
+              <select class="role-sel" data-nip="${esc(u.nip)}" aria-label="Ubah Role" style="width:auto;margin:0;padding:5px 8px;font-size:12px;border-radius:7px">
+                <option value="user" ${u.r==='user'?'selected':''}>User</option>
+                <option value="pic" ${u.r==='pic'?'selected':''}>PIC</option>
+                <option value="admin" ${u.r==='admin'?'selected':''}>Admin</option>
+              </select>
+            `:''}
+            ${u.st==='pending'?`<button class=ex data-op=approve data-nip="${esc(u.nip)}" title="Setujui Akun" aria-label="Setujui Akun">${ICO.check}</button>`:''}
+            <button class=s data-op=reset data-nip="${esc(u.nip)}" title="Reset Password" aria-label="Reset Password">${ICO.key}</button>
+            ${u.nip!==me.nip?`
+              <button class="${u.st==='off'?'ex':'s'}" data-op=${u.st==='off'?'on':'off'} data-nip="${esc(u.nip)}" title="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}" aria-label="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}">${u.st==='off'?ICO.userCheck:ICO.userX}</button>
+              <button class=d data-op=del data-nip="${esc(u.nip)}" title="Hapus Pengguna" aria-label="Hapus Pengguna">${ICO.trash}</button>
+            `:''}
+          </div>
+        </div>`).join('');
+
+      $('#ul').onchange=e=>{
+        const sel=e.target.closest('.role-sel');
+        if(!sel)return;
+        const nip=sel.dataset.nip;
+        const role=sel.value;
+        run(async()=>{
+          await api('uact',{nip,op:'role',role});
+          toast('Otorisasi '+nip+' diubah menjadi '+role.toUpperCase());
+          admView();
+        });
+      };
+
+      $('#ul').onclick=e=>{
+        const b=e.target.closest('button');if(!b)return;
+        const {op,nip}=b.dataset;
+        if(op==='reset'){
+          modal(`
+            <h3>Reset Password Pengguna</h3>
+            <p style="font-size:12.5px;color:var(--muted);margin-top:-4px">
+              Buat password sementara untuk NIP <b>${esc(nip)}</b> (min. 8 karakter, huruf + karakter spesial).
             </p>
-            ${us.map(u=>`<div class=u>
-              <div>
-                <b>${esc(u.n)}</b> <small>(${esc(u.nip)})</small><br>
-                <small>Role: <b>${esc(String(u.r||'user').toUpperCase())}</b> &bull; Status: <b>${esc(u.st)}</b></small>
-              </div>
-              <div class=a style="align-items:center">
-                ${u.nip!=='583453'?`
-                  <select data-role-nip="${esc(u.nip)}" aria-label="Role User" style="width:auto;margin:0;padding:5px 8px;font-size:12px;border-radius:7px">
-                    <option value="user" ${u.r==='user'?'selected':''}>User (View)</option>
-                    <option value="pic" ${u.r==='pic'?'selected':''}>PIC (Edit)</option>
-                    <option value="admin" ${u.r==='admin'?'selected':''}>Admin</option>
-                  </select>
-                `:''}
-                ${u.st==='pending'?`<button class=s data-o=ok data-n="${esc(u.nip)}" type=button>${ICO.userCheck}<span>Setujui</span></button>`:''}
-                ${u.st==='active'&&u.nip!=='583453'?`<button class=s data-o=off data-n="${esc(u.nip)}" type=button>${ICO.userX}<span>Nonaktifkan</span></button>`:''}
-                ${u.st==='off'?`<button class=s data-o=ok data-n="${esc(u.nip)}" type=button>${ICO.check}<span>Aktifkan</span></button>`:''}
-                <button class=s data-o=reset data-n="${esc(u.nip)}" type=button>${ICO.key}<span>Reset PW</span></button>
-                ${u.nip!=='583453'?`<button class=d data-o=del data-n="${esc(u.nip)}" type=button>${ICO.trash}<span>Hapus</span></button>`:''}
-              </div>
-            </div>`).join('')}
-          </div>
-        ` : `
-          <div class=card>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-              <div>
-                <h3 style="margin:0">Log Penghapusan Part</h3>
-                <small style="color:var(--muted)">Klik baris / kartu untuk melihat riwayat pergerakan sebelum dihapus.</small>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px">
-                <div class="view-toggle" role="group" aria-label="Mode Tampilan Log">
-                  <button type="button" id="logCards" class="${logMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
-                  <button type="button" id="logTable" class="${logMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
-                </div>
-                <button type="button" class="ex" id="btnExpLogXlsx" style="padding:6px 10px;font-size:12px" title="Export Excel">${ICO.fileSheet}<span>Excel</span></button>
-                <button type="button" class="p" id="btnExpLogPdf" style="width:auto;padding:6px 10px;font-size:12px" title="Export PDF">${ICO.filePdf}<span>PDF</span></button>
-              </div>
+            <label>Password Sementara <span style="color:var(--red)">*</span>
+              <input id="rstPw" type="password" autocomplete="new-password">
+            </label>
+            <label>Konfirmasi Password Sementara <span style="color:var(--red)">*</span>
+              <input id="rstConf" type="password" autocomplete="new-password">
+            </label>
+            <div class="row" style="margin-top:14px;margin-bottom:0">
+              <button type="button" class="s" id="rstCancel" style="flex:1">Batal</button>
+              <button type="button" class="p" id="rstSave" style="flex:1;padding:10px 14px">Reset Password</button>
             </div>
-            <div class="row" style="margin-bottom:8px">
-              <input id="qLog" type="search" placeholder="CARI BARCODE / PN / SN / ALASAN / NIP PENGHAPUS" value="${esc(logQuery)}">
-            </div>
-            <div style="margin-bottom:10px"><small id="cntLog" style="font-weight:600;color:var(--muted)"></small></div>
-            <div id="logList"></div>
-          </div>
-        `}`;
-
-      $('#tabAdmUsers').onclick=()=>{admSub='users';renderAdm()};
-      $('#tabAdmLogs').onclick=()=>{admSub='logs';renderAdm()};
-
-      if(admSub==='users'){
-        app.querySelectorAll('select[data-role-nip]').forEach(sel=>{
-          sel.onchange=()=>run(async()=>{
-            await api('uact',{op:'role',nip:sel.dataset.roleNip,role:sel.value});
-            toast('Role user berhasil diperbarui menjadi '+sel.value.toUpperCase());
+          `);
+          $('#rstCancel').onclick=closeM;
+          const submitReset=()=>run(async()=>{
+            const pw=$('#rstPw').value;
+            const cf=$('#rstConf').value;
+            if(!/^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{8,64}$/.test(pw)){
+              throw new Error('Password minimal 8 karakter, berisi huruf dan karakter spesial');
+            }
+            if(pw!==cf)throw new Error('Konfirmasi password sementara tidak cocok');
+            await api('uact',{nip,op:'reset',pw});
+            closeM();
+            toast('Password untuk '+nip+' berhasil direset');
             admView();
           });
-        });
-        app.onclick=async e=>{
-          const b=e.target.closest('button[data-o]');if(!b)return;
-          const o=b.dataset.o,nip=b.dataset.n;let pw='';
-          if(o==='reset'){
-            pw=await askPrompt({
-              title:'Reset Password ('+nip+')',
-              msg:'Password baru minimal 8 karakter, berisi huruf (a-z) dan karakter spesial.',
-              label:'Password Baru',
-              placeholder:'Masukkan password baru...',
-              okText:'Reset Password'
-            });
-            if(!pw)return;
-            if(!/^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{8,64}$/.test(pw)){
-              toast('Password minimal 8 karakter, berisi huruf dan karakter spesial');
-              return;
-            }
-          }
-          if(o==='del' && !await askConfirm({
-            title:'Hapus Akun User',
-            msg:'Apakah Anda yakin ingin menghapus user '+nip+' secara permanen?',
-            okText:'Ya, Hapus User',
+          $('#rstSave').onclick=submitReset;
+          $('#rstConf').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitReset()}};
+          requestAnimationFrame(()=>$('#rstPw').focus());
+          return;
+        }
+        if(op==='del'){
+          askConfirm({
+            title:'Hapus Pengguna',
+            msg:'Yakin ingin menghapus akun pengguna dengan NIP '+nip+'? Tindakan ini tidak dapat dibatalkan.',
+            okText:'Ya, Hapus Akun',
             danger:true
-          }))return;
-          run(async()=>{await api('uact',{op:o,nip,pw});toast('Selesai');admView()});
-        };
-      }else{
-        const drawLogs=()=>{
-          logQuery=$('#qLog').value;
-          const q=logQuery.trim().toLowerCase();
-          const filtered=logs.filter(l=>!q || [l.bc,l.ac,l.desc,l.pn,l.sn,l.loc,l.reason,l.by,l.ts].join(' ').toLowerCase().includes(q));
-          $('#cntLog').textContent=`Menampilkan ${filtered.length} dari ${logs.length} log penghapusan`;
-          const box=$('#logList');
-          if(!filtered.length){
-            box.classList.remove('cards-grid');
-            box.innerHTML='<small style="color:var(--muted)">Tidak ada data log penghapusan yang cocok.</small>';
-            return;
-          }
-          box.classList.toggle('cards-grid', logMode==='cards');
-          if(logMode==='table'){
-            box.innerHTML=`
-              <div class="tbl-wrap">
-                <table class="part-tbl">
-                  <thead>
-                    <tr>
-                      <th>Waktu Hapus</th>
-                      <th>Barcode</th>
-                      <th>A/C Reg</th>
-                      <th>Description</th>
-                      <th>PN / SN</th>
-                      <th>Lokasi</th>
-                      <th>Reason Deletion</th>
-                      <th>Dihapus Oleh</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${filtered.map((l,idx)=>`
-                      <tr class="row-un" data-log-idx="${idx}">
-                        <td style="white-space:nowrap">${esc(l.ts)}</td>
-                        <td><b>${esc(l.bc)}</b></td>
-                        <td>${esc(l.ac)}</td>
-                        <td>${esc(l.desc)}</td>
-                        <td>${esc(l.pn)} / ${esc(l.sn)}</td>
-                        <td>${esc(l.loc)||'-'}</td>
-                        <td style="color:var(--red-text);font-weight:600">${esc(l.reason)}</td>
-                        <td>${esc(l.by)}</td>
-                      </tr>`).join('')}
-                  </tbody>
-                </table>
-              </div>`;
-          }else{
-            box.innerHTML=filtered.map((l,idx)=>`
-              <div class="log-item" data-log-idx="${idx}">
-                <div class="top">
-                  <b>${esc(l.bc)} &bull; ${esc(l.desc)}</b>
-                  <span class="badge del">DELETED</span>
-                </div>
-                <small style="color:var(--red-text);font-weight:600">Reason: ${esc(l.reason)}</small>
-                <small>PN: ${esc(l.pn)} | SN: ${esc(l.sn)} | A/C: ${esc(l.ac)} | Lokasi: ${esc(l.loc)||'-'}</small>
-                <small>Waktu: ${esc(l.ts)} | Oleh: <b>${esc(l.by)}</b></small>
-              </div>`).join('');
-          }
-          box.onclick=e=>{
-            const el=e.target.closest('[data-log-idx]');
-            if(el)showDeletedLogDetail(filtered[+el.dataset.logIdx]);
-          };
-        };
+          }).then(ok=>{
+            if(ok)run(async()=>{await api('uact',{nip,op:'del'});toast('Pengguna '+nip+' dihapus');admView()});
+          });
+          return;
+        }
+        run(async()=>{await api('uact',{nip,op:op==='approve'?'on':op});toast('Berhasil');admView()});
+      };
+    });
+    return;
+  }
 
-        drawLogs();
-        $('#qLog').oninput=drawLogs;
-        $('#logCards').onclick=()=>{
-          logMode='cards';localStorage.setItem('logMode','cards');
-          $('#logCards').classList.add('active');$('#logTable').classList.remove('active');
-          drawLogs();
-        };
-        $('#logTable').onclick=()=>{
-          logMode='table';localStorage.setItem('logMode','table');
-          $('#logTable').classList.add('active');$('#logCards').classList.remove('active');
-          drawLogs();
-        };
-        const exportLogs=fmt=>run(async()=>{
-          const res=await api('export_del_logs',{fmt,q:$('#qLog').value.trim()});
-          downloadBase64File(res.base64,res.fileName,res.mimeType);
-          toast('File '+res.fileName+' berhasil diunduh');
-        });
-        $('#btnExpLogXlsx').onclick=()=>exportLogs('xlsx');
-        $('#btnExpLogPdf').onclick=()=>exportLogs('pdf');
-      }
-    };
-    renderAdm();
+  // Sub-Menu: Log Penghapusan (Audit Trail)
+  $('#admBody').innerHTML=`
+    <div class="card">
+      <div class="row">
+        <input id="qLog" placeholder="CARI BARCODE / PN / SN / REASON / PENGHAPUS" type="search" value="${esc(logQuery)}">
+        <button class="s" id="rfLog" type="button">${ICO.refresh}<span>Muat ulang</span></button>
+      </div>
+      <div class="list-meta" style="gap:6px">
+        <small id="cntLog" style="white-space:nowrap">Memuat...</small>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <div class="view-toggle" role="group" aria-label="Mode Tampilan Log">
+            <button type="button" id="logCards" class="${logMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
+            <button type="button" id="logTable" class="${logMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
+          </div>
+          <button type="button" class="ex" id="btnExportLog" title="Export Excel / PDF" style="padding:5px 9px;font-size:11.5px;gap:4px;white-space:nowrap">
+            ${ICO.download}<span>Export</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="logList"></div>`;
+
+  let allLogs=[];
+  const openLogDetail=idx=>{
+    const item=allLogs[idx];
+    if(!item)return;
+    const hist=Array.isArray(item.history)?item.history:[];
+    modal(`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <h3 style="margin:0">${esc(item.bc)}</h3>
+        <span class="badge del">DELETED</span>
+      </div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid var(--red);border-radius:9px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:11.5px;font-weight:700;color:var(--red-text);text-transform:uppercase;margin-bottom:2px">Reason Deletion</div>
+        <div style="font-size:13.5px;font-weight:700;color:var(--navy);word-break:break-word">${esc(item.reason)||'-'}</div>
+      </div>
+      <dl>
+        <dt>Deleted At</dt><dd>${esc(item.ts)||'-'}</dd>
+        <dt>Deleted By</dt><dd>${esc(item.by)||'-'}</dd>
+        <dt>A/C Reg / NHA</dt><dd>${esc(item.ac)||'-'}</dd>
+        <dt>Description</dt><dd>${esc(item.desc)||'-'}</dd>
+        <dt>Part Number</dt><dd>${esc(item.pn)||'-'}</dd>
+        <dt>Serial Number</dt><dd>${esc(item.sn)||'-'}</dd>
+        <dt>Lokasi Terakhir</dt><dd>${esc(item.loc)||'-'}</dd>
+        <dt>Status Terakhir</dt><dd>${esc(item.lastStatus)||'-'}</dd>
+      </dl>
+      <h4 style="margin-top:14px">Riwayat Pergerakan Hingga Dihapus (${hist.length})</h4>
+      <div class="tl">
+        ${hist.length
+          ? hist.map(h=>`
+              <div>
+                <b>${esc(h.loc)||'-'}</b> (${esc(h.st)||'-'})
+                <small>${esc(h.ts)} oleh ${esc(h.by)}${h.note?' | '+esc(h.note):''}</small>
+              </div>`).join('')
+          : '<small>Tidak ada catatan pergerakan sebelumnya.</small>'}
+      </div>
+    `);
+  };
+
+  const drawLogs=()=>{
+    logQuery=$('#qLog').value;
+    const q=logQuery.trim().toLowerCase();
+    const filtered=allLogs
+      .map((l,origIdx)=>({...l,_idx:origIdx}))
+      .filter(l=>!q || [l.bc,l.ac,l.desc,l.pn,l.sn,l.loc,l.reason,l.by,l.ts].join(' ').toLowerCase().includes(q));
+
+    $('#cntLog').textContent=filtered.length+' dari '+allLogs.length+' log';
+    const box=$('#logList');
+    box.classList.toggle('cards-grid', logMode==='cards');
+
+    if(!filtered.length){
+      box.innerHTML='<div class="card ctr">Belum ada data log penghapusan yang sesuai.</div>';
+      return;
+    }
+
+    if(logMode==='table'){
+      box.innerHTML=`
+        <div class="tbl-wrap">
+          <table class="part-tbl">
+            <thead>
+              <tr>
+                <th>Waktu Hapus</th>
+                <th>Barcode</th>
+                <th>A/C Reg</th>
+                <th>Description</th>
+                <th>PN / SN</th>
+                <th>Lokasi Terakhir</th>
+                <th>Reason Deletion</th>
+                <th>Dihapus Oleh</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(l=>`
+                <tr class="row-un log-row" data-idx="${l._idx}">
+                  <td style="white-space:nowrap">${esc(l.ts)}</td>
+                  <td><b>${esc(l.bc)}</b></td>
+                  <td>${esc(l.ac)||'-'}</td>
+                  <td>${esc(l.desc)||'-'}</td>
+                  <td>${esc(l.pn)||'-'} / ${esc(l.sn)||'-'}</td>
+                  <td>${esc(l.loc)||'-'}</td>
+                  <td><b style="color:var(--red-text)">${esc(l.reason)||'-'}</b></td>
+                  <td>${esc(l.by)||'-'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }else{
+      box.innerHTML=filtered.map(l=>`
+        <div class="log-item log-row" data-idx="${l._idx}">
+          <div class="top">
+            <b>${esc(l.bc)} &bull; ${esc(l.ac)||'-'}</b>
+            <span class="badge del">DELETED</span>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px">${esc(l.desc)||'-'}</div>
+          <small><b>Reason:</b> <span style="color:var(--red-text);font-weight:700">${esc(l.reason)||'-'}</span></small>
+          <small><b>PN:</b> ${esc(l.pn)||'-'} | <b>SN:</b> ${esc(l.sn)||'-'} | <b>Lokasi:</b> ${esc(l.loc)||'-'}</small>
+          <small><b>Dihapus oleh:</b> ${esc(l.by)} pada ${esc(l.ts)} &bull; <i>Klik untuk riwayat</i></small>
+        </div>`).join('');
+    }
+  };
+
+  const fetchLogs=()=>run(async()=>{
+    allLogs=await api('del_logs');
+    drawLogs();
   });
+
+  await fetchLogs();
+
+  let logSearchTimer=null;
+  $('#qLog').oninput=()=>{
+    clearTimeout(logSearchTimer);
+    logSearchTimer=setTimeout(drawLogs,120);
+  };
+  $('#rfLog').onclick=fetchLogs;
+  $('#logCards').onclick=()=>{
+    logMode='cards';localStorage.setItem('logMode','cards');
+    $('#logCards').classList.add('active');$('#logTable').classList.remove('active');
+    drawLogs();
+  };
+  $('#logTable').onclick=()=>{
+    logMode='table';localStorage.setItem('logMode','table');
+    $('#logTable').classList.add('active');$('#logCards').classList.remove('active');
+    drawLogs();
+  };
+  $('#logList').onclick=e=>{
+    const target=e.target.closest('.log-row[data-idx]');
+    if(target)openLogDetail(Number(target.dataset.idx));
+  };
+  $('#btnExportLog').onclick=()=>{
+    const curQ=$('#qLog').value.trim();
+    modal(`
+      <h3>Export Log Penghapusan</h3>
+      <p style="font-size:13px;color:var(--muted);margin-top:-4px">
+        ${curQ
+          ? `Mengekspor data log sesuai filter pencarian: <b>"${esc(curQ)}"</b> (Landscape A4).`
+          : `Mengekspor seluruh riwayat log penghapusan (${allLogs.length} item, Landscape A4).`}
+      </p>
+      <label>Pilih Format Dokumen
+        <div class="fmt-grid">
+          <button type="button" class="ex" id="btnExpLogXlsx">${ICO.fileSheet}<span>Excel (.xlsx)</span></button>
+          <button type="button" class="p" id="btnExpLogPdf">${ICO.filePdf}<span>PDF (.pdf)</span></button>
+        </div>
+      </label>
+    `);
+    const triggerLogExport=fmt=>run(async()=>{
+      const res=await api('export_del_logs',{fmt,q:curQ});
+      downloadBase64File(res.base64,res.fileName,res.mimeType);
+      closeM();
+      toast('File '+res.fileName+' berhasil diunduh');
+    });
+    $('#btnExpLogXlsx').onclick=()=>triggerLogExport('xlsx');
+    $('#btnExpLogPdf').onclick=()=>triggerLogExport('pdf');
+  };
 }
 
-(async()=>{
+if(me&&tok){
   hdr();
-  if(!tok||!me){authView();return}
   nav();
-  if(parts.length)go('list');
-  try{
-    await load();
-    if(view==='list')listView();
-    else if(view==='co')checkOutView();
-    else if(view==='ci')checkInView();
-    else if(view==='sum')sumView();
-  }catch(e){
-    if(!parts.length)toast(e.message);
+  if(parts.length){
+    go('list');
+    load().then(()=>{
+      if(view==='list')listView();
+      else if(view==='co')checkOutView();
+      else if(view==='ci')checkInView();
+      else if(view==='sum')sumView();
+    }).catch(()=>{});
+  }else{
+    run(load).then(()=>go('list'));
   }
-})();
+}else authView();
 </script></body></html>
