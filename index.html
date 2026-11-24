@@ -1560,19 +1560,20 @@ function inView(p){
   }).catch(()=>{});
 
   // Auto-fill Owner (2) jika A/C REG / NHA (1) cocok dengan database, dan reset jika belum terdaftar
+  let isApplyingOcr = false;
   const acInput=$('#f_ac'),ownerInput=$('#f_owner');
   if(acInput && ownerInput){
     ownerInput.addEventListener('change',()=>{
-      delete ownerInput.dataset.autofilled;
+      if(!isApplyingOcr) delete ownerInput.dataset.autofilled;
     });
-    const autoFillOwner=()=>{
+    const autoFillOwner=(fromOcr=false)=>{
       const acVal=acInput.value.trim().toUpperCase();
       if(!acVal){
         if(ownerInput.dataset.autofilled==='1'){
           ownerInput.value='';
           delete ownerInput.dataset.autofilled;
         }
-        return;
+        return false;
       }
       const matched=parts.find(item=>String(item.ac||'').trim().toUpperCase()===acVal && String(item.owner||'').trim());
       if(matched){
@@ -1580,13 +1581,17 @@ function inView(p){
         ownerInput.innerHTML=buildOwnerOptions(matchedOwner);
         ownerInput.value=matchedOwner;
         ownerInput.dataset.autofilled='1';
+        if(fromOcr) markOcrField(ownerInput);
+        return true;
       }else if(ownerInput.dataset.autofilled==='1'){
         ownerInput.value='';
         delete ownerInput.dataset.autofilled;
       }
+      return false;
     };
-    acInput.addEventListener('input',autoFillOwner);
-    acInput.addEventListener('change',autoFillOwner);
+    acInput.addEventListener('input',()=>autoFillOwner(false));
+    acInput.addEventListener('change',()=>autoFillOwner(false));
+    acInput._autoFillOwner = autoFillOwner;
   }
 
   let activeOcrBanner=null;
@@ -1634,79 +1639,89 @@ function inView(p){
       const firstInput=lbl.querySelector('input,select,textarea,.row');
       lbl.insertBefore(badge,firstInput||null);
     }
+    if(el.dataset.ocrBound==='1')return;
+    el.dataset.ocrBound='1';
     const unmark=()=>{
+      if(isApplyingOcr)return;
+      if(!el.classList.contains('ocr-filled'))return;
       el.classList.remove('ocr-filled');
       const b=lbl && lbl.querySelector('.ocr-tag');
       if(b)b.remove();
       updateOcrBanner();
     };
-    el.addEventListener('input',unmark,{once:true});
-    el.addEventListener('change',unmark,{once:true});
+    el.addEventListener('input',unmark);
+    el.addEventListener('change',unmark);
   };
 
   const applyOcrResult=rawData=>{
     if(!rawData || typeof rawData!=='object')return;
     // Pisahkan metadata _ocrEngine & _ocrModel agar tidak pernah menyentuh input form
     const {_ocrEngine, _ocrModel, ...data} = rawData;
-    clearOcrMarks();
-    // 'owner' dikeluarkan dari textKeys agar tidak terisi teks mentah dari tag (misal 'GIA') jika A/C Reg belum terdaftar
-    const textKeys=['ac','desc','pn','sn','qty','rno','rdet','disc','wno','wdet','rby','dby'];
-    if(!edit && data.bc && !$('#f_bc').value.trim()){
-      const bcEl=$('#f_bc');
-      bcEl.value=String(data.bc).trim().toUpperCase();
-      markOcrField(bcEl);
-    }
-    const noSpaceKeys=['ac','pn','sn','rno','wno'];
-    textKeys.forEach(k=>{
-      const el=$('#f_'+k);
-      if(el && data[k]!=null && String(data[k]).trim()!==''){
-        let val=String(data[k]).trim().toUpperCase();
-        if(noSpaceKeys.includes(k))val=val.replace(/\s+/g,'');
-        el.value=val;
+    isApplyingOcr = true;
+    try {
+      clearOcrMarks();
+      const textKeys=['ac','desc','pn','sn','qty','rno','rdet','disc','wno','wdet','rby','dby'];
+      if(!edit && data.bc && !$('#f_bc').value.trim()){
+        const bcEl=$('#f_bc');
+        bcEl.value=String(data.bc).trim().toUpperCase();
+        markOcrField(bcEl);
+      }
+      const noSpaceKeys=['ac','pn','sn','rno','wno'];
+      textKeys.forEach(k=>{
+        const el=$('#f_'+k);
+        if(el && data[k]!=null && String(data[k]).trim()!==''){
+          let val=String(data[k]).trim().toUpperCase();
+          if(noSpaceKeys.includes(k))val=val.replace(/\s+/g,'');
+          el.value=val;
+          markOcrField(el);
+        }
+      });
+      // Reset Owner sebelum dicocokkan dengan A/C REG atau hasil pembacaan OCR
+      if(ownerInput){
+        ownerInput.value='';
+        delete ownerInput.dataset.autofilled;
+      }
+      ['rdate','ddate'].forEach(k=>{
+        const el=$('#f_'+k);
+        const val=String(data[k]||'').trim();
+        if(el && /^\d{4}-\d{2}-\d{2}$/.test(val)){
+          el.value=val;
+          markOcrField(el);
+        }
+      });
+      if(data.rtype && RT.includes(data.rtype)){
+        const el=$('#f_rtype');
+        el.value=data.rtype;
         markOcrField(el);
       }
-    });
-    // Reset Owner sebelum dicocokkan dengan A/C REG atau daftar master sheet 'owner'
-    if(ownerInput){
-      ownerInput.value='';
-      delete ownerInput.dataset.autofilled;
-    }
-    ['rdate','ddate'].forEach(k=>{
-      const el=$('#f_'+k);
-      const val=String(data[k]||'').trim();
-      if(el && /^\d{4}-\d{2}-\d{2}$/.test(val)){
-        el.value=val;
+      if(data.wtype && WT.includes(data.wtype)){
+        const el=$('#f_wtype');
+        el.value=data.wtype;
         markOcrField(el);
       }
-    });
-    if(data.rtype && RT.includes(data.rtype)){
-      const el=$('#f_rtype');
-      el.value=data.rtype;
-      markOcrField(el);
-    }
-    if(data.wtype && WT.includes(data.wtype)){
-      const el=$('#f_wtype');
-      el.value=data.wtype;
-      markOcrField(el);
-    }
-    if(data.status==='Serviceable' || data.status==='Unserviceable'){
-      const el=$('#f_status');
-      el.value=data.status;
-      markOcrField(el);
-    }
-    if(acInput)acInput.dispatchEvent(new Event('change'));
-    // Jika A/C Reg belum terdaftar di database, cocokkan hasil OCR Owner hanya jika persis ada di master sheet 'owner'
-    if(ownerInput && !ownerInput.value && data.owner){
-      const ocrOwner=String(data.owner).trim().toUpperCase();
-      const validOwners=getAllOwners();
-      if(validOwners.includes(ocrOwner)){
+      if(data.status==='Serviceable' || data.status==='Unserviceable'){
+        const el=$('#f_status');
+        el.value=data.status;
+        markOcrField(el);
+      }
+      // 1. Cek auto-fill Owner berdasarkan A/C REG dari database (ikut ditandai kuning OCR)
+      const ownerFilledFromAc = (acInput && typeof acInput._autoFillOwner === 'function')
+        ? acInput._autoFillOwner(true)
+        : false;
+      // 2. Jika belum terisi dari A/C REG dan hasil OCR membaca Owner, masukkan & tandai kuning OCR
+      if(ownerInput && !ownerFilledFromAc && data.owner && String(data.owner).trim()!==''){
+        const ocrOwner=String(data.owner).trim().toUpperCase();
+        ownerInput.innerHTML=buildOwnerOptions(ocrOwner);
         ownerInput.value=ocrOwner;
         markOcrField(ownerInput);
       }
+      updateOcrBanner();
+      const firstHighlighted=app.querySelector('.ocr-filled');
+      if(firstHighlighted)firstHighlighted.scrollIntoView({behavior:'smooth',block:'center'});
+      return _ocrEngine || 'gemini';
+    } finally {
+      isApplyingOcr = false;
     }
-    const firstHighlighted=app.querySelector('.ocr-filled');
-    if(firstHighlighted)firstHighlighted.scrollIntoView({behavior:'smooth',block:'center'});
-    return _ocrEngine || 'gemini';
   };
 
   const handleOcrFile=e=>{
