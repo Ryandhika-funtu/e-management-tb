@@ -903,7 +903,7 @@ const S=[
 
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',edit=null,sc=null,onc=null,photoData='';
+let tok=localStorage.getItem('tok'),me=JSON.parse(localStorage.getItem('me')||'null'),parts=JSON.parse(localStorage.getItem('cache_parts')||'[]'),locations=JSON.parse(localStorage.getItem('cache_locs')||'[]'),owners=JSON.parse(localStorage.getItem('cache_owners')||'[]'),view='list',listMode=localStorage.getItem('listMode')||'cards',coMode=localStorage.getItem('coMode')||'cards',ciMode=localStorage.getItem('ciMode')||'cards',coQuery='',coStatus='',ciQuery='',sumSub='overview',over7Mode=localStorage.getItem('over7Mode')||'table',over7Query='',over7Status='',over7Ac='',over7Loc='',admSub='users',logMode=localStorage.getItem('logMode')||'table',logQuery='',pageSize=+(localStorage.getItem('pageSize')||20),curPage=1,listQuery='',listStatus='',listChk='',edit=null,sc=null,onc=null,photoData='';
 const canWrite=()=>Boolean(me && (me.r==='pic' || me.r==='admin'));
 const canCheckInOut=canWrite;
 
@@ -1577,19 +1577,21 @@ function openExportModal(){
   const isCheckView=isCoView || isCiView;
   const qEl=isCoView?$('#qCo'):(isCiView?$('#qCi'):$('#q'));
   const fsEl=isCoView?$('#fsCo'):(isCiView?null:$('#fs'));
+  const fchkEl=(view==='list')?$('#fchk'):null;
   const searchVal=((view==='list' || isCheckView) && qEl)?qEl.value.trim():'';
   const statusVal=((view==='list' || isCoView) && fsEl)?fsEl.value:'';
+  const chkVal=fchkEl?fchkEl.value:'';
   const isOk=st=>/^serviceable$/i.test(String(st||'').trim());
   const baseParts=isCoView
     ? parts.filter(p=>p.chk!=='CHECK-OUT' && p.chk!=='INSTALLED')
     : (isCiView ? parts.filter(p=>p.chk==='CHECK-OUT') : parts);
 
-  const hasFilter=Boolean(isCheckView || searchVal || statusVal);
+  const hasFilter=Boolean(isCheckView || searchVal || statusVal || chkVal);
   const filterLabel=isCoView
     ? ['READY CHECK-OUT', searchVal, statusVal].filter(Boolean).join(' - ').toUpperCase()
     : (isCiView
         ? ['STATUS CHECK-OUT', searchVal].filter(Boolean).join(' - ').toUpperCase()
-        : [searchVal, statusVal ? (isOk(statusVal)?'SERVICEABLE':'UN-SERVICEABLE') : '']
+        : [searchVal, statusVal ? (isOk(statusVal)?'SERVICEABLE':'UN-SERVICEABLE') : '', chkVal]
             .filter(Boolean).join(' - ').toUpperCase());
 
   let selectedItems=[];
@@ -1599,7 +1601,10 @@ function openExportModal(){
       const matchSt=isCoView
         ? (!statusVal || (statusVal==='AVAIL' ? !p.chk : p.chk==='CHECK-IN'))
         : (isCiView ? true : (!statusVal || isOk(p.status)===isOk(statusVal)));
-      return matchSt && (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow));
+      const matchChk=(view==='list' && chkVal)
+        ? (chkVal==='AVAIL' ? !p.chk : p.chk===chkVal)
+        : true;
+      return matchSt && matchChk && (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow));
     });
   }
 
@@ -1734,11 +1739,18 @@ function listView(){
         <input id=q placeholder="CARI BARCODE / PN / SN / LOKASI" type=search value="${esc(listQuery)}">
         <button class=s id=sc type=button>${ICO.scan}<span>Scan</span></button>
       </div>
-      <div class=row>
+      <div class=row style="flex-wrap:wrap">
         <select id=fs>
-          <option value="" ${listStatus===''?'selected':''}>Semua status</option>
+          <option value="" ${listStatus===''?'selected':''}>Semua Status</option>
           <option value="Serviceable" ${listStatus==='Serviceable'?'selected':''}>Serviceable</option>
-          <option value="Unserviceable" ${listStatus==='Unserviceable'?'selected':''}>Unserviceable</option>
+          <option value="Unserviceable" ${listStatus==='Unserviceable'?'selected':''}>Un-Serviceable</option>
+        </select>
+        <select id=fchk>
+          <option value="" ${listChk===''?'selected':''}>Semua Check Status</option>
+          <option value="AVAIL" ${listChk==='AVAIL'?'selected':''}>Avail (Belum Check-In/Out)</option>
+          <option value="CHECK-IN" ${listChk==='CHECK-IN'?'selected':''}>Check-In</option>
+          <option value="CHECK-OUT" ${listChk==='CHECK-OUT'?'selected':''}>Check-Out</option>
+          <option value="INSTALLED" ${listChk==='INSTALLED'?'selected':''}>Installed</option>
         </select>
         <button class=s id=rf type=button>${ICO.refresh}<span>Muat ulang</span></button>
       </div>
@@ -1773,8 +1785,13 @@ function listView(){
   const getFiltered=()=>{
     listQuery=$('#q').value;
     listStatus=$('#fs').value;
-    const q=listQuery.toLowerCase(),f=listStatus;
-    return parts.filter(p=>(!f||isOk(p.status)===isOk(f))&&(!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q)));
+    listChk=$('#fchk').value;
+    const q=listQuery.toLowerCase(),f=listStatus,fc=listChk;
+    return parts.filter(p=>
+      (!f||isOk(p.status)===isOk(f)) &&
+      (!fc||(fc==='AVAIL'?!p.chk:p.chk===fc)) &&
+      (!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
+    );
   };
 
   const syncBatchUi=(filtered)=>{
@@ -1910,6 +1927,7 @@ function listView(){
     searchTimer=setTimeout(()=>{curPage=1;draw()},120);
   };
   $('#fs').onchange=()=>{curPage=1;draw()};
+  $('#fchk').onchange=()=>{curPage=1;draw()};
   $('#modeCards').onclick=()=>{
     listMode='cards';localStorage.setItem('listMode','cards');
     $('#modeCards').classList.add('active');$('#modeTable').classList.remove('active');
@@ -3220,6 +3238,7 @@ function sumView(){
     }
     const stFilter=$('#sumSt').value;
     listStatus=stFilter||'';
+    listChk='';
     listQuery=(val!=='TIDAK DIKETAHUI')?val:'';
     go('list');
   };
