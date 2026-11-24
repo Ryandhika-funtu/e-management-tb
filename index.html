@@ -3433,11 +3433,10 @@ function renderOver7View(){
   if(over7Ac && !acOpts.includes(over7Ac))over7Ac='';
   if(over7Loc && !locOpts.includes(over7Loc))over7Loc='';
 
-  $('#sumWrap').innerHTML=`
+  $$('#sumWrap').innerHTML=`
     <div class="card">
       <div class="row">
         <input id="qOver7" placeholder="CARI BARCODE / PN / SN / DESC / A/C / LOKASI" type="search" value="${esc(over7Query)}">
-        <button class="s" id="rfOver7" type="button">${ICO.refresh}<span>Muat ulang</span></button>
       </div>
       <div class="row" style="flex-wrap:wrap">
         <select id="fsOver7St">
@@ -3460,6 +3459,10 @@ function renderOver7View(){
           <option value="" ${over7Loc===''?'selected':''}>Semua Lokasi</option>
           ${locOpts.map(l=>`<option value="${esc(l)}" ${over7Loc===l?'selected':''}>${esc(l)}</option>`).join('')}
         </select>
+      </div>
+      <div class="row">
+        <button class="d" id="rstOver7" type="button" style="flex:1">${ICO.close}<span>Reset Filter</span></button>
+        <button class="s" id="rfOver7" type="button" style="flex:1">${ICO.refresh}<span>Muat ulang</span></button>
       </div>
       <div class="list-meta" style="gap:6px">
         <small id="cntOver7" style="white-space:nowrap"></small>
@@ -3612,6 +3615,20 @@ function renderOver7View(){
   $('#over7Table').onclick=()=>{
     over7Mode='table';localStorage.setItem('over7Mode','table');
     $('#over7Table').classList.add('active');$('#over7Cards').classList.remove('active');
+    drawOver7();
+  };
+  $('#rstOver7').onclick=()=>{
+    over7Query='';
+    over7Status='';
+    over7Chk='';
+    over7Ac='';
+    over7Loc='';
+    $('#qOver7').value='';
+    $('#fsOver7St').value='';
+    $('#fsOver7Chk').value='';
+    $('#fsOver7Ac').value='';
+    $('#fsOver7Loc').value='';
+    over7Page=1;
     drawOver7();
   };
   $('#rfOver7').onclick=()=>run(async()=>{await load();renderOver7View();toast('Data diperbarui')});
