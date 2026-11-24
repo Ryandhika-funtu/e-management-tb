@@ -3433,7 +3433,7 @@ function renderOver7View(){
   if(over7Ac && !acOpts.includes(over7Ac))over7Ac='';
   if(over7Loc && !locOpts.includes(over7Loc))over7Loc='';
 
-  $$('#sumWrap').innerHTML=`
+  $('#sumWrap').innerHTML=`
     <div class="card">
       <div class="row">
         <input id="qOver7" placeholder="CARI BARCODE / PN / SN / DESC / A/C / LOKASI" type="search" value="${esc(over7Query)}">
