@@ -1773,7 +1773,10 @@ function listView(){
           <option value="CHECK-OUT" ${listChk==='CHECK-OUT'?'selected':''}>Check-Out</option>
           <option value="INSTALLED" ${listChk==='INSTALLED'?'selected':''}>Installed</option>
         </select>
-        <button class=s id=rf type=button>${ICO.refresh}<span>Muat ulang</span></button>
+      </div>
+      <div class=row>
+        <button class=s id=rstList type=button style="flex:1">${ICO.close}<span>Reset Filter</span></button>
+        <button class=s id=rf type=button style="flex:1">${ICO.refresh}<span>Muat ulang</span></button>
       </div>
       <div class="list-meta" style="gap:6px">
         <small id=cnt style="white-space:nowrap"></small>
@@ -1957,6 +1960,17 @@ function listView(){
   $('#modeTable').onclick=()=>{
     listMode='table';localStorage.setItem('listMode','table');
     $('#modeTable').classList.add('active');$('#modeCards').classList.remove('active');
+    draw();
+  };
+  $('#rstList').onclick=()=>{
+    listQuery='';
+    listStatus='';
+    listChk='';
+    $('#q').value='';
+    $('#fs').value='';
+    $('#fchk').value='';
+    selected.clear();
+    curPage=1;
     draw();
   };
   $('#rf').onclick=()=>run(async()=>{await load();selected.clear();draw()});
@@ -2331,7 +2345,10 @@ function checkOutView(){
           <option value="AVAIL" ${coStatus==='AVAIL'?'selected':''}>Avail (Belum Pernah Check-In/Out)</option>
           <option value="CHECK-IN" ${coStatus==='CHECK-IN'?'selected':''}>Check-In</option>
         </select>
-        <button class=s id=rfCo type=button>${ICO.refresh}<span>Muat ulang</span></button>
+      </div>
+      <div class=row>
+        <button class=s id=rstCo type=button style="flex:1">${ICO.close}<span>Reset Filter</span></button>
+        <button class=s id=rfCo type=button style="flex:1">${ICO.refresh}<span>Muat ulang</span></button>
       </div>
       <div class="list-meta" style="gap:6px">
         <small id=cntCo style="white-space:nowrap"></small>
@@ -2519,6 +2536,15 @@ function checkOutView(){
     $('#coTable').classList.add('active');$('#coCards').classList.remove('active');
     drawCo();
   };
+  $('#rstCo').onclick=()=>{
+    coQuery='';
+    coStatus='';
+    $('#qCo').value='';
+    $('#fsCo').value='';
+    selected.clear();
+    coPage=1;
+    drawCo();
+  };
   $('#rfCo').onclick=()=>run(async()=>{await load();selected.clear();drawCo()});
   $('#btnExportCo').onclick=openExportModal;
 
@@ -2599,10 +2625,13 @@ function checkInView(){
         <input id=qCi placeholder="FILTER LOKASI / BARCODE / PN / SN (STATUS CHECK-OUT)" type=search value="${esc(ciQuery)}">
         <button class=s id=scCi type=button>${ICO.scan}<span>Scan</span></button>
       </div>
+      <div class=row>
+        <button type="button" class="s" id="rstCi" style="flex:1">${ICO.close}<span>Reset Filter</span></button>
+        <button type="button" class="s" id="rfCi" style="flex:1">${ICO.refresh}<span>Muat ulang</span></button>
+      </div>
       <div class="list-meta" style="gap:6px">
         <small id=cntCi style="white-space:nowrap"></small>
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-          <button type="button" class="s" id="rfCi" style="padding:5px 9px;font-size:11.5px;gap:4px">${ICO.refresh}<span>Muat ulang</span></button>
           <div class="view-toggle" role="group" aria-label="Mode Tampilan">
             <button type="button" id="ciCards" class="${ciMode==='cards'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.grid}<span>Cards</span></button>
             <button type="button" id="ciTable" class="${ciMode==='table'?'active':''}" style="padding:5px 8px;font-size:11.5px;gap:4px">${ICO.table}<span>Tabel</span></button>
@@ -2786,6 +2815,13 @@ function checkInView(){
   $('#ciTable').onclick=()=>{
     ciMode='table';localStorage.setItem('ciMode','table');
     $('#ciTable').classList.add('active');$('#ciCards').classList.remove('active');
+    drawCi();
+  };
+  $('#rstCi').onclick=()=>{
+    ciQuery='';
+    $('#qCi').value='';
+    selected.clear();
+    ciPage=1;
     drawCi();
   };
   $('#rfCi').onclick=()=>run(async()=>{await load();selected.clear();drawCi()});
