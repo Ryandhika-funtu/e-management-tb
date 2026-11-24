@@ -858,11 +858,30 @@ a:hover{text-decoration:underline}
 }
 
 /* Admin User List & Audit Logs */
-.u{
-  display:flex;justify-content:space-between;gap:10px;align-items:center;
-  padding:12px 0;border-bottom:1px solid var(--border);
+.u{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:12px;margin-bottom:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.u:last-child{margin-bottom:0}
+.u-info{flex:1 1 200px;min-width:0}
+.u-name{font-weight:700;font-size:13.5px;color:#0f172a;line-height:1.35;word-break:break-word;overflow-wrap:anywhere}
+.u-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;font-size:11.5px;color:var(--muted)}
+.u .a{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;flex:0 1 auto;margin-left:auto}
+.u .a button{padding:5px 10px;font-size:11.5px;border-radius:7px;white-space:nowrap}
+.role-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.2px;border:1px solid transparent}
+.role-admin{background:#fee2e2;color:#b91c1c;border-color:#fca5a5}
+.role-pic-h1{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+.role-pic-h3{background:#dcfce7;color:#15803d;border-color:#86efac}
+.role-pic{background:#fef3c7;color:#b45309;border-color:#fcd34d}
+.role-user{background:#f1f5f9;color:#475569;border-color:#cbd5e1}
+.role-sel{width:auto!important;min-width:96px;margin:0!important;padding:5px 8px!important;font-size:12px!important;font-weight:700!important;border-radius:7px!important;cursor:pointer}
+.role-sel.role-admin{background:#fef2f2;color:#b91c1c;border-color:#fca5a5}
+.role-sel.role-pic-h1{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}
+.role-sel.role-pic-h3{background:#f0fdf4;color:#15803d;border-color:#86efac}
+.role-sel.role-pic{background:#fffbeb;color:#b45309;border-color:#fcd34d}
+.role-sel.role-user{background:#f8fafc;color:#475569;border-color:#cbd5e1}
+@media(max-width:520px){
+  .u{align-items:flex-start}
+  .u-info{flex:1 1 100%}
+  .u .a{width:100%;justify-content:flex-start;padding-top:8px;border-top:1px dashed var(--line)}
 }
-.u:last-child{border-bottom:none;padding-bottom:0}
 .u b{color:var(--navy);font-size:14px}
 .u small{color:var(--muted);font-size:12px}
 .u .a{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
@@ -3785,23 +3804,34 @@ async function admView(){
       const us=await api('users');
       const L={active:'Aktif',pending:'Menunggu',off:'Nonaktif'};
       const R={admin:'Admin',pic:'PIC','pic-h1':'PIC-H1','pic-h3':'PIC-H3',user:'User'};
+      const roleCls=r=>({admin:'role-admin','pic-h1':'role-pic-h1','pic-h3':'role-pic-h3',pic:'role-pic',user:'role-user'}[r]||'role-user');
+      const stColor=st=>st==='active'?'#15803d':(st==='pending'?'#b45309':'#b91c1c');
       $('#ul').innerHTML='<h3>Kelola pengguna ('+us.length+')</h3>'+us.map(u=>`
-        <div class=u>
-          <div><b>${esc(u.n)}</b><br><small>${esc(u.nip)} | ${R[u.r]||u.r} | ${L[u.st]||u.st}</small></div>
-          <div class=a>
+        <div class="u">
+          <div class="u-info">
+            <div class="u-name">${esc(u.n)}</div>
+            <div class="u-meta">
+              <span>${esc(u.nip)}</span>
+              <span>•</span>
+              <span class="role-badge ${roleCls(u.r)}">${esc(R[u.r]||u.r)}</span>
+              <span>•</span>
+              <span style="font-weight:600;color:${stColor(u.st)}">${esc(L[u.st]||u.st)}</span>
+            </div>
+          </div>
+          <div class="a">
             ${u.nip!==me.nip?`
-              <select class="role-sel" data-nip="${esc(u.nip)}" aria-label="Ubah Role" style="width:auto;margin:0;padding:5px 8px;font-size:12px;border-radius:7px">
+              <select class="role-sel ${roleCls(u.r)}" data-nip="${esc(u.nip)}" aria-label="Ubah Role">
                 <option value="user" ${u.r==='user'?'selected':''}>User</option>
                 <option value="pic-h1" ${u.r==='pic-h1'?'selected':''}>PIC-H1</option>
                 <option value="pic-h3" ${u.r==='pic-h3'?'selected':''}>PIC-H3</option>
                 <option value="admin" ${u.r==='admin'?'selected':''}>Admin</option>
               </select>
             `:''}
-            ${u.st==='pending'?`<button class=ex data-op=approve data-nip="${esc(u.nip)}" title="Setujui Akun" aria-label="Setujui Akun">${ICO.check}</button>`:''}
-            <button class=s data-op=reset data-nip="${esc(u.nip)}" title="Reset Password" aria-label="Reset Password">${ICO.key}</button>
+            ${u.st==='pending'?`<button class="ex" data-op="approve" data-nip="${esc(u.nip)}" title="Setujui Akun" aria-label="Setujui Akun">${ICO.check}</button>`:''}
+            <button class="s" data-op="reset" data-nip="${esc(u.nip)}" title="Reset Password" aria-label="Reset Password">${ICO.key}</button>
             ${u.nip!==me.nip?`
-              <button class="${u.st==='off'?'ex':'s'}" data-op=${u.st==='off'?'on':'off'} data-nip="${esc(u.nip)}" title="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}" aria-label="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}">${u.st==='off'?ICO.userCheck:ICO.userX}</button>
-              <button class=d data-op=del data-nip="${esc(u.nip)}" title="Hapus Pengguna" aria-label="Hapus Pengguna">${ICO.trash}</button>
+              <button class="${u.st==='off'?'ex':'s'}" data-op="${u.st==='off'?'on':'off'}" data-nip="${esc(u.nip)}" title="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}" aria-label="${u.st==='off'?'Aktifkan Akun':'Nonaktifkan Akun'}">${u.st==='off'?ICO.userCheck:ICO.userX}</button>
+              <button class="d" data-op="del" data-nip="${esc(u.nip)}" title="Hapus Pengguna" aria-label="Hapus Pengguna">${ICO.trash}</button>
             `:''}
           </div>
         </div>`).join('');
@@ -3811,6 +3841,7 @@ async function admView(){
         if(!sel)return;
         const nip=sel.dataset.nip;
         const role=sel.value;
+        sel.className='role-sel '+roleCls(role);
         run(async()=>{
           await api('uact',{nip,op:'role',role});
           toast('Otorisasi '+nip+' diubah menjadi '+role.toUpperCase());
