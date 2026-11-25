@@ -1537,10 +1537,14 @@ function promptAddOwner(selectEl){
 }
 
 function field([k,l,t,o],v,req){
-  const id='f_'+k;v=v||'';
+  const id='f_'+k;v=String(v||'').trim();
   const mark=req?' <span style="color:var(--red)">*</span>':'';
   if(t==='area')return `<label>${l}${mark}<textarea id=${id} rows=3>${esc(v)}</textarea></label>`;
-  if(t==='sel')return `<label>${l}${mark}<select id=${id}>${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+  if(t==='sel'){
+    const opts=[...o];
+    if(v && !opts.some(x=>x.toLowerCase()===v.toLowerCase()))opts.push(v);
+    return `<label>${l}${mark}<select id=${id}>${opts.map(x=>`<option value="${esc(x)}" ${x.toLowerCase()===v.toLowerCase()?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+  }
   if(t==='loc_sel')return `<label>${l}${mark}<div class="row" style="margin-bottom:0"><select id=${id}>${buildLocationOptions(v)}</select><button type="button" class="s" id="${id}_add" title="Tambah Lokasi Baru" aria-label="Tambah Lokasi Baru" style="padding:0 13px">${ICO.plusSm}</button></div></label>`;
   if(t==='owner_sel')return `<label>${l}${mark}<div class="row" style="margin-bottom:0"><select id=${id}>${buildOwnerOptions(v)}</select><button type="button" class="s" id="${id}_add" title="Tambah Owner Baru" aria-label="Tambah Owner Baru" style="padding:0 13px">${ICO.plusSm}</button></div></label>`;
   if(t==='date'){
@@ -1748,15 +1752,21 @@ function inView(p){
           markOcrField(el);
         }
       });
-      if(data.rtype && RT.includes(data.rtype)){
-        const el=$('#f_rtype');
-        el.value=data.rtype;
-        markOcrField(el);
+      if(data.rtype){
+        const matchedRt=RT.find(x=>x && x.toLowerCase()===String(data.rtype).trim().toLowerCase());
+        if(matchedRt){
+          const el=$('#f_rtype');
+          el.value=matchedRt;
+          markOcrField(el);
+        }
       }
-      if(data.wtype && WT.includes(data.wtype)){
-        const el=$('#f_wtype');
-        el.value=data.wtype;
-        markOcrField(el);
+      if(data.wtype){
+        const matchedWt=WT.find(x=>x && x.toLowerCase()===String(data.wtype).trim().toLowerCase());
+        if(matchedWt){
+          const el=$('#f_wtype');
+          el.value=matchedWt;
+          markOcrField(el);
+        }
       }
       if(data.status==='Serviceable' || data.status==='Unserviceable'){
         const el=$('#f_status');
