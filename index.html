@@ -1918,7 +1918,7 @@ function openExportModal(){
       const matchChk=(view==='list' && chkVal)
         ? (chkVal==='AVAIL' ? !p.chk : p.chk===chkVal)
         : true;
-      return matchSt && matchChk && (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(qLow));
+      return matchSt && matchChk && (!qLow || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.disc].join(' ').toLowerCase().includes(qLow));
     });
   }
 
@@ -2107,7 +2107,7 @@ function listView(){
     return parts.filter(p=>
       (!f||isOk(p.status)===isOk(f)) &&
       (!fc||(fc==='AVAIL'?!p.chk:p.chk===fc)) &&
-      (!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
+      (!q||[p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.disc].join(' ').toLowerCase().includes(q))
     );
   };
 
@@ -2180,6 +2180,7 @@ function listView(){
                 <th>Serial Number</th>
                 <th>Lokasi</th>
                 <th>Status</th>
+                <th>Discrepancies</th>
               </tr>
             </thead>
             <tbody>
@@ -2198,6 +2199,7 @@ function listView(){
                       <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
                       ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
                     </td>
+                    <td>${esc(p.disc)||'-'}</td>
                   </tr>`;
               }).join('')}
             </tbody>
@@ -2677,7 +2679,7 @@ function checkOutView(){
     return parts.filter(p=>
       p.chk!=='CHECK-OUT' && p.chk!=='INSTALLED' &&
       (!f || (f==='AVAIL' ? !p.chk : p.chk==='CHECK-IN')) &&
-      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
+      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.disc].join(' ').toLowerCase().includes(q))
     );
   };
 
@@ -2754,6 +2756,7 @@ function checkOutView(){
                 <th>Serial Number</th>
                 <th>Lokasi</th>
                 <th>Status</th>
+                <th>Discrepancies</th>
               </tr>
             </thead>
             <tbody>
@@ -2772,6 +2775,7 @@ function checkOutView(){
                       ${chkBadge(p)}
                       <span class="badge ${isOk(p.status)?'ok':''}" style="margin-left:4px">${isOk(p.status)?'SVC':'UNSVC'}</span>
                     </td>
+                    <td>${esc(p.disc)||'-'}</td>
                   </tr>`;
               }).join('')}
             </tbody>
@@ -2959,7 +2963,7 @@ function checkInView(){
     const q=ciQuery.toLowerCase();
     return parts.filter(p=>
       p.chk==='CHECK-OUT' &&
-      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac].join(' ').toLowerCase().includes(q))
+      (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.disc].join(' ').toLowerCase().includes(q))
     );
   };
 
@@ -3036,6 +3040,7 @@ function checkInView(){
                 <th>Serial Number</th>
                 <th>Lokasi</th>
                 <th>Status</th>
+                <th>Discrepancies</th>
               </tr>
             </thead>
             <tbody>
@@ -3054,6 +3059,7 @@ function checkInView(){
                       <span class="badge chk-out">CHECK-OUT</span>
                       <span class="badge ${isOk(p.status)?'ok':''}" style="margin-left:4px">${isOk(p.status)?'SVC':'UNSVC'}</span>
                     </td>
+                    <td>${esc(p.disc)||'-'}</td>
                   </tr>`;
               }).join('')}
             </tbody>
@@ -3577,6 +3583,7 @@ function sumView(){
     const totalD=matched.length;
     const okD=matched.filter(p=>isOk(p.status)).length;
     const unD=totalD-okD;
+    let curDiscMode='loc';
 
     modal(`
       <h3 style="margin-bottom:6px">Rincian Discrepancy (8)</h3>
@@ -3588,17 +3595,25 @@ function sumView(){
           <span class="pill-un">${unD} UNSVC</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">KELOMPOKKAN BERDASARKAN:</span>
-        <div class="view-toggle" role="group">
-          <button type="button" id="discByLoc" class="active" style="padding:5px 10px;font-size:12px">Location</button>
-          <button type="button" id="discByAc" style="padding:5px 10px;font-size:12px">A/C Reg</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <span style="font-size:11.5px;font-weight:700;color:var(--muted)">KELOMPOKKAN:</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto">
+          <div class="view-toggle" role="group">
+            <button type="button" id="discByLoc" class="active" style="padding:5px 9px;font-size:11.5px">Location</button>
+            <button type="button" id="discByAc" style="padding:5px 9px;font-size:11.5px">A/C Reg</button>
+          </div>
+          <button type="button" class="ex" id="btnDiscExpXlsx" title="Export Excel sesuai urutan aktif" style="padding:5px 8px;font-size:11.5px;gap:4px">
+            ${ICO.fileSheet}<span>Excel</span>
+          </button>
+          <button type="button" class="p" id="btnDiscExpPdf" title="Export PDF sesuai urutan aktif" style="width:auto;padding:5px 8px;font-size:11.5px;gap:4px">
+            ${ICO.filePdf}<span>PDF</span>
+          </button>
         </div>
       </div>
       <div id="discBreakdown"></div>
     `);
 
-    const renderBreakdown=(mode)=>{
+    const getGroupedDisc=(mode)=>{
       const map=new Map();
       matched.forEach(p=>{
         const key=mode==='loc'
@@ -3609,7 +3624,15 @@ function sumView(){
         if(isOk(p.status))g.ok++;else g.un++;
         g.items.push(p);
       });
-      const groups=Array.from(map.values()).sort((a,b)=>b.items.length-a.items.length);
+      return Array.from(map.values()).sort((a,b)=>{
+        const diff=b.items.length-a.items.length;
+        return diff!==0 ? diff : a.name.localeCompare(b.name);
+      });
+    };
+
+    const renderBreakdown=(mode)=>{
+      curDiscMode=mode;
+      const groups=getGroupedDisc(mode);
 
       $('#discBreakdown').innerHTML=groups.length
         ? groups.map(g=>{
@@ -3652,6 +3675,24 @@ function sumView(){
       };
     };
 
+    const triggerDiscExport=fmt=>run(async()=>{
+      const groups=getGroupedDisc(curDiscMode);
+      const sortedBcs=groups.flatMap(g=>g.items.map(item=>item.bc));
+      if(!sortedBcs.length)throw new Error('Tidak ada data rincian untuk diexport');
+      const modeLabel=curDiscMode==='loc'?'BY LOCATION':'BY A/C REG';
+      const stLabel=stFilter ? (isOk(stFilter)?'SERVICEABLE':'UN-SERVICEABLE') : '';
+      const exportLabel=['DISCREPANCY: '+discName, stLabel, modeLabel].filter(Boolean).join(' - ').toUpperCase();
+      const res=await api('export',{
+        loc:'SELECTED',
+        fmt,
+        bcs:sortedBcs,
+        label:exportLabel,
+        sortBy:curDiscMode
+      });
+      downloadBase64File(res.base64,res.fileName,res.mimeType);
+      toast('File '+res.fileName+' berhasil diunduh');
+    });
+
     renderBreakdown('loc');
     $('#discByLoc').onclick=()=>{
       $('#discByLoc').classList.add('active');
@@ -3663,6 +3704,8 @@ function sumView(){
       $('#discByLoc').classList.remove('active');
       renderBreakdown('ac');
     };
+    $('#btnDiscExpXlsx').onclick=()=>triggerDiscExport('xlsx');
+    $('#btnDiscExpPdf').onclick=()=>triggerDiscExport('pdf');
   };
 
   renderSum();
@@ -3765,7 +3808,7 @@ function renderOver7View(){
         (!over7Chk.length || over7Chk.includes(partChk)) &&
         (!over7Ac || String(p.ac||'').trim().toUpperCase()===over7Ac) &&
         (!over7Loc || String(p.loc||'').trim().toUpperCase()===over7Loc) &&
-        (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.rdate].join(' ').toLowerCase().includes(q));
+        (!q || [p.bc,p.pn,p.sn,p.desc,p.loc,p.ac,p.rdate,p.disc].join(' ').toLowerCase().includes(q));
     });
   };
   const drawOver7=()=>{
@@ -3818,6 +3861,7 @@ function renderOver7View(){
                 <th>Removed Date (11)</th>
                 <th>Durasi</th>
                 <th>Status</th>
+                <th>Discrepancies</th>
               </tr>
             </thead>
             <tbody>
@@ -3835,6 +3879,7 @@ function renderOver7View(){
                     <span class="badge ${isOk(p.status)?'ok':''}">${isOk(p.status)?'Serviceable':'Un-Serviceable'}</span>
                     ${p.chk?`<span class="badge ${p.chk==='CHECK-OUT'?'chk-out':(p.chk==='INSTALLED'?'chk-inst':'chk-in')}" style="margin-left:4px">${esc(p.chk)}</span>`:''}
                   </td>
+                  <td>${esc(p.disc)||'-'}</td>
                 </tr>`).join('')}
             </tbody>
           </table>
